@@ -1,0 +1,30 @@
+name: barbado
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  device_preview: ^1.3.1
+  flutter:
+    sdk: flutter
+  get_it: ^8.2.0
+  google_fonts: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets: 
+    - lib/images/logo.png
+    - lib/images/logo_white.png
+    - lib/images/barbeiro.png
+    - lib/images/barber_icon.png
+    - lib/images/barber-chair_icon.png
+    - lib/images/beard_icon.png
+    - lib/images/man-hair_icon.png
