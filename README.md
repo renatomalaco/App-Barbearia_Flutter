@@ -1,3 +1,3 @@
-# barbado
+# BarbearIA
 
 A new Flutter project.
