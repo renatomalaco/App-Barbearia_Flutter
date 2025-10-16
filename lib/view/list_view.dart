@@ -3,6 +3,8 @@ import '../controller/list_controller.dart';
 import '../model/list_model.dart';
 import 'schedule_view.dart';
 import 'chat_view.dart';
+import 'config_view.dart';
+import 'barbershop_detail_view.dart';
 
 class ListsView extends StatefulWidget {
   const ListsView({super.key});
@@ -31,6 +33,7 @@ class _ListsViewState extends State<ListsView> {
       _buildBarbershopListPage(), // A sua tela de lista de barbearias
       const ScheduleView(),       // A tela da Agenda
       ChatView(),                 // A tela do Chat
+      const ConfigView(),         // ADICIONADO: A tela de Configurações
     ];
   }
 
@@ -69,6 +72,11 @@ class _ListsViewState extends State<ListsView> {
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings),
+            label: 'Ajustes',
           ),
         ],
         currentIndex: _selectedIndex,
@@ -135,7 +143,7 @@ class _ListsViewState extends State<ListsView> {
                   itemCount: barbershops.length,
                   itemBuilder: (context, index) {
                     final barbershop = barbershops[index];
-                    return _buildBarbershopCard(barbershop);
+                    return _BarbershopCard(barbershop: barbershop);
                   },
                 );
               },
@@ -169,81 +177,112 @@ class _ListsViewState extends State<ListsView> {
     );
   }
 
-  Widget _buildBarbershopCard(Barbershop barbershop) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      elevation: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
-            child: Image.network(
-              barbershop.imageUrl,
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  barbershop.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  barbershop.description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text(
-                      barbershop.openingHours,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, size: 16, color: Colors.red),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${barbershop.address} - ${barbershop.cityState}, ${barbershop.zipCode}',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+}
+
+class _BarbershopCard extends StatefulWidget {
+  final Barbershop barbershop;
+
+  const _BarbershopCard({required this.barbershop});
+
+  @override
+  State<_BarbershopCard> createState() => _BarbershopCardState();
+}
+
+class _BarbershopCardState extends State<_BarbershopCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BarbershopDetailView(barbershopName: widget.barbershop.name),
+            ),
+          );
+        },
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          elevation: _isHovered ? 8 : 2,
+          clipBehavior: Clip.antiAlias, // Garante que a imagem não ultrapasse as bordas arredondadas
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AnimatedScale(
+                scale: _isHovered ? 1.05 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: Image.network(
+                  widget.barbershop.imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.barbershop.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.barbershop.description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.barbershop.openingHours,
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 16, color: Colors.red),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${widget.barbershop.address} - ${widget.barbershop.cityState}, ${widget.barbershop.zipCode}',
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
