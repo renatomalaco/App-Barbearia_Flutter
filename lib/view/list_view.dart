@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../controller/list_controller.dart';
 import '../model/list_model.dart';
+import 'schedule_view.dart';
+import 'chat_view.dart';
 
 class ListsView extends StatefulWidget {
   const ListsView({super.key});
@@ -10,94 +12,155 @@ class ListsView extends StatefulWidget {
 }
 
 class _ListsViewState extends State<ListsView> {
+  // 1. ADICIONADO: Controlador de estado para o item selecionado na Bottom Bar
+  int _selectedIndex = 0;
+
+  // Manter o controller da sua lista original
   final _controller = ListController();
+
+  // ADICIONADO: Lista de telas que serão navegadas
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     _controller.loadBarbershops();
+
+    // A lista de páginas agora é inicializada aqui
+    _pages = [
+      _buildBarbershopListPage(), // A sua tela de lista de barbearias
+      const ScheduleView(),       // A tela da Agenda
+      ChatView(),                 // A tela do Chat
+    ];
+  }
+
+  // 2. ADICIONADO: Função para atualizar o estado quando um item é tocado
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // 3. MODIFICADO: O Scaffold agora contém a BottomNavigationBar
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Topo da tela com os botões de categoria e perfil do usuário
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(Icons.search),
-                      ),
-                      const Text(
-                        'Search Barbershop',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const CircleAvatar(
-                        backgroundImage: NetworkImage('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop'), // Imagem de perfil de exemplo
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildCategoryButton(context, 'Barbeiros', 'lib/images/barber_icon.png'),
-                      _buildCategoryButton(context, 'Salões', 'lib/images/barber-chair_icon.png'),
-                      _buildCategoryButton(context, 'Cortes', 'lib/images/man-hair_icon.png'),
-                      _buildCategoryButton(context, 'Barba', 'lib/images/beard_icon.png'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ValueListenableBuilder<List<Barbershop>>(
-                valueListenable: _controller.barbershops,
-                builder: (context, barbershops, child) {
-                  return ListView.builder(
-                    controller: _controller.scrollController,
-                    itemCount: barbershops.length,
-                    itemBuilder: (context, index) {
-                      final barbershop = barbershops[index];
-                      return _buildBarbershopCard(barbershop);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+      // O IndexedStack é usado para manter o estado de cada página
+      // ao alternar entre elas.
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
+
+      // 4. ADICIONADO: A implementação da BottomNavigationBar
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home), // Ícone quando ativo
+            label: 'Início',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today),
+            label: 'Agenda',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: 'Chat',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.black87, // Cor do item ativo
+        unselectedItemColor: Colors.grey,   // Cor dos itens inativos
+        showUnselectedLabels: true,        // Garante que todos os labels apareçam
+        type: BottomNavigationBarType.fixed, // Layout fixo para os itens
       ),
     );
   }
 
+  // 5. MOVIDO: Todo o conteúdo original do corpo foi movido para este método
+  // para manter o código organizado.
+  Widget _buildBarbershopListPage() {
+    return SafeArea(
+      child: Column(
+        children: [
+          // Topo da tela com os botões de categoria e perfil do usuário
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(Icons.search),
+                    ),
+                    const Text(
+                      'Search Barbershop',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const CircleAvatar(
+                      backgroundImage: NetworkImage('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop'), // Imagem de perfil de exemplo
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildCategoryButton(context, 'Barbeiros', 'lib/images/barber_icon.png'),
+                    _buildCategoryButton(context, 'Salões', 'lib/images/barber-chair_icon.png'),
+                    _buildCategoryButton(context, 'Cortes', 'lib/images/man-hair_icon.png'),
+                    _buildCategoryButton(context, 'Barba', 'lib/images/beard_icon.png'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<List<Barbershop>>(
+              valueListenable: _controller.barbershops,
+              builder: (context, barbershops, child) {
+                return ListView.builder(
+                  controller: _controller.scrollController,
+                  itemCount: barbershops.length,
+                  itemBuilder: (context, index) {
+                    final barbershop = barbershops[index];
+                    return _buildBarbershopCard(barbershop);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // O resto do seu código permanece o mesmo
   Widget _buildCategoryButton(BuildContext context, String text, String imagePath) {
     return Column(
       children: [
         Container(
           width: 60,
           height: 60,
-          padding: const EdgeInsets.all(12), // Adiciona um respiro para a imagem
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: Image.asset(
             imagePath,
-            color: Colors.grey[700], // Aplica uma cor para consistência visual
+            color: Colors.grey[700],
           ),
         ),
         const SizedBox(height: 4),
