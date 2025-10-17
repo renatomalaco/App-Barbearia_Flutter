@@ -3,17 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'view/auth/forgot_password_view.dart';
-import 'view/auth/login_view.dart';
-import 'view/auth/register_view.dart';
+import 'auth/view/forgot_password_view.dart';
+import 'auth/view/login_view.dart';
+import 'auth/view/register_view.dart';
+import 'auth/view/barber_register_view.dart';
+import 'view/config_view.dart';
 import 'view/welcome_view.dart';
 import 'view/list_view.dart';
-import 'view/schedule_view.dart';
+import 'client_flow/view/schedule_view.dart';
 import 'view/chat_view.dart';
+import 'view/about_view.dart';
+import 'client_flow/view/edit_profile_view.dart';
+import '../view/theme_service.dart';
 
 final g = GetIt.instance;
 
+void setupDependencies() {
+  // Registra o serviço de tema como um singleton
+  g.registerSingleton<ThemeService>(ThemeService());
+}
+
 void main() {
+  setupDependencies();
   initializeDateFormatting('pt_BR', null).then((_) {
     runApp(
       DevicePreview(
@@ -29,18 +40,42 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'BabearIA',
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const WelcomeView(),
-        'login': (context) => LoginView(),
-        'register': (context) => RegisterView(),
-        'forgot_password': (context) => ForgotPasswordView(),
-        'list': (context) => ListsView(),
-        'agenda': (context) => ScheduleView(),
-        'chat': (context) => ChatView(),
+    // Ouve as mudanças no serviço de tema
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: g<ThemeService>(),
+      builder: (context, themeMode, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Barber Connect',
+          theme: ThemeData(brightness: Brightness.light), // Tema claro padrão
+          darkTheme: ThemeData(brightness: Brightness.dark), // Tema escuro padrão
+          themeMode: themeMode, // Define o tema atual
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const WelcomeView(),
+            'register': (context) => RegisterView(),
+            'barber_register': (context) => const BarberRegisterView(),
+            'forgot_password': (context) => ForgotPasswordView(),
+            'agenda': (context) => ScheduleView(),
+            'chat': (context) => ChatView(),
+            'about': (context) => const AboutView(),
+            'config': (context) => const ConfigView(),
+            'list': (context) => const ListsView(), 
+            'edit_profile': (context) => const EditProfileView(),
+          },
+          onGenerateRoute: (settings) {
+            if (settings.name == 'login') {
+              final userType = settings.arguments as String;
+              return MaterialPageRoute(builder: (context) => LoginView(userType: userType));
+            }
+            if (settings.name == 'list') {
+              // Permite que a rota 'list' receba um argumento opcional para o índice da aba
+              final initialIndex = settings.arguments as int? ?? 0;
+              return MaterialPageRoute(builder: (context) => ListsView(initialIndex: initialIndex));
+            }
+            return null; // Deixe o Flutter lidar com outras rotas
+          },
+        );
       },
     );
   }

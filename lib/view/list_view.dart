@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import '../controller/list_controller.dart';
 import '../model/list_model.dart';
-import 'schedule_view.dart';
+import '../client_flow/view/schedule_view.dart';
 import 'chat_view.dart';
 import 'config_view.dart';
 import 'barbershop_detail_view.dart';
 
 class ListsView extends StatefulWidget {
-  const ListsView({super.key});
+  final int initialIndex;
+
+  const ListsView({super.key, this.initialIndex = 0});
 
   @override
   State<ListsView> createState() => _ListsViewState();
@@ -26,6 +28,7 @@ class _ListsViewState extends State<ListsView> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
     _controller.loadBarbershops();
 
     // A lista de páginas agora é inicializada aqui
@@ -57,31 +60,52 @@ class _ListsViewState extends State<ListsView> {
 
       // 4. ADICIONADO: A implementação da BottomNavigationBar
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home), // Ícone quando ativo
+            icon: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Icon(Icons.home_outlined),
+            ),
+            activeIcon: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Icon(Icons.home),
+            ), // Ícone quando ativo
             label: 'Início',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            activeIcon: Icon(Icons.calendar_today),
+            icon: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Icon(Icons.calendar_today_outlined),
+            ),
+            activeIcon: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Icon(Icons.calendar_today),
+            ),
             label: 'Agenda',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
+            icon: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Icon(Icons.chat_bubble_outline),
+            ),
+            activeIcon: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Icon(Icons.chat_bubble),
+            ),
             label: 'Chat',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
+            icon: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Icon(Icons.settings_outlined),
+            ),
+            activeIcon: Padding(padding: const EdgeInsets.only(top: 4.0), child: Icon(Icons.settings)),
             label: 'Ajustes',
           ),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: Colors.black87, // Cor do item ativo
+        selectedItemColor: const Color(0xFF844333), // Cor do item ativo
         unselectedItemColor: Colors.grey,   // Cor dos itens inativos
         showUnselectedLabels: true,        // Garante que todos os labels apareçam
         type: BottomNavigationBarType.fixed, // Layout fixo para os itens
@@ -116,8 +140,13 @@ class _ListsViewState extends State<ListsView> {
                       'Search Barbershop',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const CircleAvatar(
-                      backgroundImage: NetworkImage('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop'), // Imagem de perfil de exemplo
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, 'edit_profile');
+                      },
+                      child: const CircleAvatar(
+                        backgroundImage: NetworkImage('https://media.discordapp.net/attachments/1249450843002896516/1428545035283992586/jsus_cristo.png?ex=68f2e3bd&is=68f1923d&hm=060b3bddd2cf74cfcdeffa521b00f4c6492013281478d3e2976bcc613d1f822c&=&format=webp&quality=lossless&width=786&height=810'), // Imagem de perfil de exemplo
+                      ),
                     ),
                   ],
                 ),

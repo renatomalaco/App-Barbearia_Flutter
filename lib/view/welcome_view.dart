@@ -62,7 +62,7 @@ class WelcomeView extends StatelessWidget {
                 const SizedBox(height: 24.0),
 
                 // Botão de Login com estilo e dimensões atualizadas.
-                ElevatedButton.icon(
+                ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     minimumSize: const Size(double.infinity, 60),
@@ -71,14 +71,11 @@ class WelcomeView extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
-                    Navigator.pushNamed(context, 'login');
+                    // Navega para a tela de login passando o tipo de usuário
+                    Navigator.pushNamed(context, 'login', arguments: 'client');
                   },
-                  // icon: Image.asset(
-                  //   'lib/images/logo_white.png',
-                  //   height: 40.0,
-                  // ),
-                  label: Text(
-                    'Login',
+                  child: Text(
+                    'Sou Cliente',
                     style: GoogleFonts.abyssinicaSil(
                       fontSize: 18,
                       color: Colors.white,
@@ -87,22 +84,23 @@ class WelcomeView extends StatelessWidget {
                 ),
                 const SizedBox(height: 16.0),
 
-                // Botão de Cadastrar como OutlinedButton.
+                // Botão para o fluxo do barbeiro
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: primaryColor,
                     minimumSize: const Size(double.infinity, 60),
-                    side: const BorderSide(color: primaryColor, width: 1.5),
+                    side: const BorderSide(color: primaryColor, width: 2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(5.0),
                     ),
                   ),
                   onPressed: () {
-                    Navigator.pushNamed(context, 'register'); 
+                    // Navega para a tela de login passando o tipo de usuário
+                    Navigator.pushNamed(context, 'login', arguments: 'barber');
                   },
                   child: Text(
-                    'Cadastrar',
+                    'Sou Barbeiro',
                     style: GoogleFonts.abyssinicaSil( 
                       fontSize: 18,
                     ),

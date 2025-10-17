@@ -1,5 +1,5 @@
-import 'package:barbado/controller/schedule_controller.dart';
-import 'package:barbado/model/schedule_model.dart';
+import 'package:barbado/client_flow/controller/schedule_controller.dart';
+import 'package:barbado/client_flow/model/schedule_model.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 

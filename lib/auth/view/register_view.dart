@@ -186,7 +186,15 @@ class _RegisterViewState extends State<RegisterView> {
                     style: TextStyle(fontSize: 18, color: Colors.white),
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () {
+                    // Navega de volta para a tela de welcome e remove todas as outras rotas
+                    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                  },
+                  child: const Text('Voltar ao início'),
+                ),
+                const SizedBox(height: 24),
               ],
             ),
           ),

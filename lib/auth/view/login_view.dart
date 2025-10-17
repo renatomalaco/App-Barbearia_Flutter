@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+  final String userType;
+
+  const LoginView({super.key, required this.userType});
 
   @override
   State<LoginView> createState() => _LoginViewState();
@@ -25,6 +27,15 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        // Adiciona um botão de "voltar" que retorna para a tela anterior (Welcome)
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -126,12 +137,16 @@ class _LoginViewState extends State<LoginView> {
                   onPressed: () {
                     // Aciona a validação de todos os TextFormField do formulário.
                     if (_formKey.currentState!.validate()) {
-                      // Se a validação for bem-sucedida, prossiga com a lógica de login.
-                      // Por enquanto, apenas navega para a próxima tela.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Login em processamento...')),
-                      );
-                      Navigator.pushReplacementNamed(context, 'list'); // Usar pushReplacementNamed para não poder voltar ao login
+                      // Lógica de navegação baseada no tipo de usuário
+                      if (widget.userType == 'barber') {
+                        // Navega para o fluxo do barbeiro
+                        Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false);
+                      } else {
+                        // Navega para o fluxo do cliente (ainda a ser criado)
+                        // Por enquanto, vamos usar uma rota placeholder que precisa ser criada
+                        // TODO: Criar a rota e a tela 'client_home'
+                        Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false); // Temporariamente para 'list'
+                      }
                     }
                   },
                   child: const Text(
@@ -148,8 +163,12 @@ class _LoginViewState extends State<LoginView> {
                     const Text('Não tem uma conta?'),
                     TextButton(
                       onPressed: () {
-                        // Navega para a tela de cadastro.
-                        Navigator.pushNamed(context, 'register');
+                        // Navega para a tela de cadastro correta
+                        if (widget.userType == 'client') {
+                          Navigator.pushNamed(context, 'register');
+                        } else {
+                          Navigator.pushNamed(context, 'barber_register');
+                        }
                       },
                       child: const Text('Registre agora'),
                     ),
