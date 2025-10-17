@@ -16,9 +16,9 @@ class BarbershopDetailController {
       rating: '4.8',
       reviewCount: '2.4k'
     ),
-    'Barba & Navalha': BarbershopDetail(
-        name: 'Barba & Navalha',
-        imageUrl: 'https://images.unsplash.com/photo-1536520002442-39764a41e987?q=80&w=1000&auto=format&fit=crop',
+    'Barbearia Old School': BarbershopDetail(
+        name: 'Barbearia Old School',
+        imageUrl: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YmFyYmVyc2hvcHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600',
         description: 'Especialistas em barbas e cortes tradicionais, oferecendo uma experiência premium para o homem moderno.',
         openingHours: '10:00 - 21:00',
         address: 'Av. dos Barbeiros, 456',
@@ -27,9 +27,9 @@ class BarbershopDetailController {
         rating: '4.9',
         reviewCount: '3.1k'
     ),
-    'Corte do Rei': BarbershopDetail(
-        name: 'Corte do Rei',
-        imageUrl: 'https://images.unsplash.com/photo-1536520002442-39764a41e987?q=80&w=1000&auto=format&fit=crop',
+    'Classic Cuts Barbershop': BarbershopDetail(
+        name: 'Classic Cuts Barbershop',
+        imageUrl: 'https://images.unsplash.com/photo-1693755807658-17ce5331aacb?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGJhcmJlcnNob3B8ZW58MHwwfDB8fHww&auto=format&fit=crop&q=60&w=600',
         description: 'O tratamento que você merece, com os melhores profissionais e produtos do mercado.',
         openingHours: '08:30 - 19:30',
         address: 'Praça da Coroa, 789',

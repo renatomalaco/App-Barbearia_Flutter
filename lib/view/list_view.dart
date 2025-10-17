@@ -127,18 +127,11 @@ class _ListsViewState extends State<ListsView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(Icons.search),
-                    ),
-                    const Text(
-                      'Search Barbershop',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                      },
                     ),
                     GestureDetector(
                       onTap: () {

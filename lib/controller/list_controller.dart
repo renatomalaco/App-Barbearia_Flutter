@@ -24,7 +24,7 @@ class ListController {
         address: 'Av. Paulista, 1000 - Bela Vista',
         cityState: 'São Paulo - SP',
         zipCode: '01310-100',
-        imageUrl: 'https://images.unsplash.com/photo-1536520002442-39764a41e987?q=80&w=1000&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YmFyYmVyc2hvcHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600',
         openingHours: '09:00 - 18:00',
       ),
       Barbershop(
@@ -33,7 +33,7 @@ class ListController {
         address: 'Rua da Consolação, 500 - Consolação',
         cityState: 'São Paulo - SP',
         zipCode: '01302-000',
-        imageUrl: 'https://images.unsplash.com/photo-1536520002442-39764a41e987?q=80&w=1000&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1693755807658-17ce5331aacb?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGJhcmJlcnNob3B8ZW58MHwwfDB8fHww&auto=format&fit=crop&q=60&w=600',
         openingHours: '10:00 - 19:00',
       ),
     ];
