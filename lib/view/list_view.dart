@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../controller/list_controller.dart';
 import '../model/list_model.dart';
 import '../client_flow/view/schedule_view.dart';
@@ -107,6 +108,8 @@ class _ListsViewState extends State<ListsView> {
         onTap: _onItemTapped,
         selectedItemColor: const Color(0xFF844333), // Cor do item ativo
         unselectedItemColor: Colors.grey,   // Cor dos itens inativos
+        selectedLabelStyle: GoogleFonts.baloo2(),
+        unselectedLabelStyle: GoogleFonts.baloo2(),
         showUnselectedLabels: true,        // Garante que todos os labels apareçam
         type: BottomNavigationBarType.fixed, // Layout fixo para os itens
       ),
