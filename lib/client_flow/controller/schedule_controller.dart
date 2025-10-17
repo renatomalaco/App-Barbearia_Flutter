@@ -53,6 +53,27 @@ class ScheduleController {
     selectedEvents.value = getEventsForDay(newSelectedDay);
   }
 
+  // --- Mock Data for Tabs ---
+  final List<FavoriteBarber> favoriteBarbers = [
+    const FavoriteBarber(
+      name: 'Jhon Cortes Clássicos',
+      specialty: 'Cortes tradicionais',
+      avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop',
+    ),
+    const FavoriteBarber(
+      name: 'Marcos da Navalha',
+      specialty: 'Barbas e design',
+      avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80',
+    ),
+  ];
+
+  final List<FavoriteTimeSlot> favoriteTimeSlots = [
+    const FavoriteTimeSlot(time: '09:00', barberName: 'Jhon Cortes Clássicos', service: 'Corte e Barba'),
+    const FavoriteTimeSlot(time: '11:00', barberName: 'Marcos da Navalha', service: 'Corte Degradê'),
+    const FavoriteTimeSlot(time: '15:00', barberName: 'Jhon Cortes Clássicos', service: 'Barba Terapia'),
+    const FavoriteTimeSlot(time: '16:30', barberName: 'Jhon Cortes Clássicos', service: 'Corte Simples'),
+  ];
+
   void dispose() {
     profile.dispose();
     selectedEvents.dispose();

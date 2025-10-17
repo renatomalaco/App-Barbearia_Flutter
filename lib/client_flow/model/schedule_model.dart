@@ -20,3 +20,27 @@ class Event {
   @override
   String toString() => title;
 }
+
+class FavoriteBarber {
+  final String name;
+  final String specialty;
+  final String avatarUrl;
+
+  const FavoriteBarber({
+    required this.name,
+    required this.specialty,
+    required this.avatarUrl,
+  });
+}
+
+class FavoriteTimeSlot {
+  final String time;
+  final String barberName;
+  final String service;
+
+  const FavoriteTimeSlot({
+    required this.time,
+    required this.barberName,
+    required this.service,
+  });
+}

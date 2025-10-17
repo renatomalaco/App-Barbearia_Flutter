@@ -101,7 +101,7 @@ class _ListsViewState extends State<ListsView> {
               child: Icon(Icons.settings_outlined),
             ),
             activeIcon: Padding(padding: const EdgeInsets.only(top: 4.0), child: Icon(Icons.settings)),
-            label: 'Ajustes',
+            label: 'Configurações',
           ),
         ],
         currentIndex: _selectedIndex,

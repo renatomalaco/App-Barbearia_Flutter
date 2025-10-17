@@ -34,7 +34,7 @@ class _ConfigViewState extends State<ConfigView> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   child: Text(
-                    'Ajustes e Perfil',
+                    'Configurações e Perfil',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.baloo2(
                       fontSize: 24,
