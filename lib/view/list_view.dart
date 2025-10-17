@@ -34,10 +34,10 @@ class _ListsViewState extends State<ListsView> {
 
     // A lista de páginas agora é inicializada aqui
     _pages = [
-      _buildBarbershopListPage(), // A sua tela de lista de barbearias
-      const ScheduleView(),       // A tela da Agenda
-      const ChatListView(),       // A tela do Chat
-      const ConfigView(),         // ADICIONADO: A tela de Configurações
+      _buildBarbershopListPage(), 
+      const ScheduleView(),       
+      const ChatListView(),       
+      const ConfigView(),         
     ];
   }
 

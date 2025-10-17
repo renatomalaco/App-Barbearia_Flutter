@@ -39,16 +39,15 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ouve as mudanças no serviço de tema
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: g<ThemeService>(),
       builder: (context, themeMode, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Barber Connect',
-          theme: ThemeData(brightness: Brightness.light), // Tema claro padrão
-          darkTheme: ThemeData(brightness: Brightness.dark), // Tema escuro padrão
-          themeMode: themeMode, // Define o tema atual
+          theme: ThemeData(brightness: Brightness.light), 
+          darkTheme: ThemeData(brightness: Brightness.dark), 
+          themeMode: themeMode, 
           initialRoute: '/',
           routes: {
             '/': (context) => const WelcomeView(),
@@ -71,7 +70,7 @@ class MainApp extends StatelessWidget {
               final initialIndex = settings.arguments as int? ?? 0;
               return MaterialPageRoute(builder: (context) => ListsView(initialIndex: initialIndex));
             }
-            return null; // Deixe o Flutter lidar com outras rotas
+            return null; // OFlutter lida com outras rotas
           },
         );
       },
