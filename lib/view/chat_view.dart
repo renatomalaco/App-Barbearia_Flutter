@@ -1,39 +1,50 @@
 import 'package:flutter/material.dart';
-import '../controller/chat_controller.dart';
+import '../client_flow/controller/chat_controller.dart';
 import '../model/chat_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ChatView extends StatelessWidget {
-  ChatView({super.key});
+  final String chatName;
+  final String avatarUrl;
+
+  ChatView({
+    super.key,
+    required this.chatName,
+    required this.avatarUrl,
+  });
 
   final ChatController _controller = ChatController();
   final TextEditingController _textController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    // Busca as mensagens corretas para este chat
+    final messages = _controller.getMessagesForChat(chatName);
+
     return Scaffold(
       body: Column(
         children: [
           SafeArea(
             child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Text(
-                    'Mensagens',
-                    style: GoogleFonts.baloo2(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+              children: [                
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const Divider(color: Colors.grey, height: 1),
                 ListTile(
-                  leading: const CircleAvatar(
-                    backgroundImage: NetworkImage('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop'),
+                  leading: CircleAvatar(
+                    backgroundImage: NetworkImage(avatarUrl),
                   ),
                   title: Text(
-                    'Jhon Cortes Clássicos',
+                    chatName,
                     style: GoogleFonts.baloo2(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
@@ -48,9 +59,9 @@ class ChatView extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(8.0),
-              itemCount: _controller.mockMessages.length,
+              itemCount: messages.length,
               itemBuilder: (context, index) {
-                final message = _controller.mockMessages[index];
+                final message = messages[index];
                 return _buildMessageBubble(message);
               },
             ),
@@ -68,7 +79,7 @@ class ChatView extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
         padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
-          color: message.isSentByMe ? const Color(0xFF844333) : const Color.fromARGB(255, 207, 204, 204),
+          color: message.isSentByMe ? const Color(0xFF844333) : const Color(0xFFd3d3d3),
           borderRadius: BorderRadius.circular(16.0),
         ),
         child: Text(

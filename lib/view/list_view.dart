@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controller/list_controller.dart';
 import '../model/list_model.dart';
 import '../client_flow/view/schedule_view.dart';
-import 'chat_view.dart';
+import '../client_flow/view/chat_list_view.dart';
 import 'config_view.dart';
 import 'barbershop_detail_view.dart';
 
@@ -36,7 +36,7 @@ class _ListsViewState extends State<ListsView> {
     _pages = [
       _buildBarbershopListPage(), // A sua tela de lista de barbearias
       const ScheduleView(),       // A tela da Agenda
-      ChatView(),                 // A tela do Chat
+      const ChatListView(),       // A tela do Chat
       const ConfigView(),         // ADICIONADO: A tela de Configurações
     ];
   }

@@ -11,7 +11,6 @@ import 'view/config_view.dart';
 import 'view/welcome_view.dart';
 import 'view/list_view.dart';
 import 'client_flow/view/schedule_view.dart';
-import 'view/chat_view.dart';
 import 'view/about_view.dart';
 import 'client_flow/view/edit_profile_view.dart';
 import '../view/theme_service.dart';
@@ -57,7 +56,6 @@ class MainApp extends StatelessWidget {
             'barber_register': (context) => const BarberRegisterView(),
             'forgot_password': (context) => ForgotPasswordView(),
             'agenda': (context) => ScheduleView(),
-            'chat': (context) => ChatView(),
             'about': (context) => const AboutView(),
             'config': (context) => const ConfigView(),
             'list': (context) => const ListsView(), 
