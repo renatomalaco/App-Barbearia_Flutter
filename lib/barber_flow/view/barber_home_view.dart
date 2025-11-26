@@ -52,7 +52,6 @@ class _BarberHomeViewState extends State<BarberHomeView> {
   Future<void> _saveBarbershop() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Converte a string de especialidades em Lista
     List<String> specialtiesList = _specialtiesListCtrl.text
         .split(',')
         .map((e) => e.trim())
@@ -61,13 +60,15 @@ class _BarberHomeViewState extends State<BarberHomeView> {
 
     final shopData = {
       'name': _nameCtrl.text,
+      // --- CAMPO NOVO PARA O RF006 ---
+      'name_lowercase': _nameCtrl.text.toLowerCase(), 
+      // -------------------------------
       'description': _descCtrl.text,
       'address': _addrCtrl.text,
       'cityState': _cityCtrl.text,
       'zipCode': _zipCtrl.text,
       'openingHours': _hoursCtrl.text,
       'imageUrl': _imgCtrl.text.isNotEmpty ? _imgCtrl.text : 'https://via.placeholder.com/300',
-      // Novos Campos Salvos
       'barberName': _barberNameCtrl.text,
       'barberSpecialty': _barberSpecialtyCtrl.text,
       'specialties': specialtiesList,
