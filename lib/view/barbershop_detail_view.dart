@@ -1,42 +1,26 @@
 import 'package:flutter/material.dart';
-import '../controller/barbershop_detail_controller.dart';
-import '../model/barbershop_detail_model.dart';
+import '../model/list_model.dart'; // Certifique-se de importar o modelo correto
 
 class BarbershopDetailView extends StatefulWidget {
-  final String barbershopName;
+  // 1. Mudamos de String para o Objeto Barbershop
+  final Barbershop barbershop;
 
-  const BarbershopDetailView({super.key, required this.barbershopName});
+  const BarbershopDetailView({super.key, required this.barbershop});
 
   @override
   State<BarbershopDetailView> createState() => _BarbershopDetailViewState();
 }
 
 class _BarbershopDetailViewState extends State<BarbershopDetailView> {
-  final BarbershopDetailController _controller = BarbershopDetailController();
-  BarbershopDetail? _detail;
-
-  @override
-  void initState() {
-    super.initState();
-    // Busca os detalhes da barbearia com base no nome recebido
-    _detail = _controller.getDetailsFor(widget.barbershopName);
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Verifica se os detalhes foram encontrados
-    if (_detail == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const Center(
-          child: Text('Detalhes da barbearia não encontrados.'),
-        ),
-      );
-    }
+    // 2. Agora usamos 'widget.barbershop' para acessar os dados
+    // Não precisamos mais de controller ou initState para buscar dados
+    final shop = widget.barbershop;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_detail!.name),
+        title: Text(shop.name),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -56,19 +40,22 @@ class _BarbershopDetailViewState extends State<BarbershopDetailView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.network(
-                    _detail!.imageUrl,
-                    height: 220,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  if (shop.imageUrl.isNotEmpty)
+                    Image.network(
+                      shop.imageUrl,
+                      height: 220,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox(height: 220, child: Center(child: Icon(Icons.broken_image))),
+                    ),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _detail!.description,
+                          shop.description,
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey[700],
@@ -78,9 +65,10 @@ class _BarbershopDetailViewState extends State<BarbershopDetailView> {
                         const SizedBox(height: 16),
                         const Divider(),
                         const SizedBox(height: 16),
-                        _buildInfoRow(Icons.location_on, 'Endereço', '${_detail!.address}, ${_detail!.cityState}'),
+                        _buildInfoRow(Icons.location_on, 'Endereço',
+                            '${shop.address}, ${shop.cityState}'),
                         const SizedBox(height: 12),
-                        _buildInfoRow(Icons.access_time, 'Horário', _detail!.openingHours),
+                        _buildInfoRow(Icons.access_time, 'Horário', shop.openingHours),
                       ],
                     ),
                   ),
@@ -90,35 +78,49 @@ class _BarbershopDetailViewState extends State<BarbershopDetailView> {
             const SizedBox(height: 24),
 
             // Seção "Barbeiro Responsável"
-            const Text('Barbeiro Responsável', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('Barbeiro Responsável',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            const ListTile(
+            ListTile(
               leading: CircleAvatar(
                 radius: 30,
-                backgroundImage: NetworkImage('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop'),
+                // Se não tiver foto do barbeiro, usa a padrão
+                backgroundImage: (shop.barberImageUrl.isNotEmpty)
+                    ? NetworkImage(shop.barberImageUrl)
+                    : const AssetImage('lib/images/user.png') as ImageProvider,
               ),
-              title: Text('João da Silva', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text('Especialista em cortes clássicos'),
+              title: Text(shop.barberName,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(shop.barberSpecialty),
             ),
             const SizedBox(height: 24),
 
             // Seção "Especialidades"
-            const Text('Especialidades', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('Especialidades',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Image.asset('lib/images/man-hair_icon.png', width: 30, color: Colors.black87),
-                const SizedBox(width: 12),
-                const Text('Corte', style: TextStyle(fontSize: 16)),
-              ],
-            ),
+            
+            // Gera a lista de especialidades dinamicamente
+            if (shop.specialties.isNotEmpty)
+              ...shop.specialties.map((specialty) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Image.asset('lib/images/man-hair_icon.png',
+                            width: 30, color: Colors.black87),
+                        const SizedBox(width: 12),
+                        Text(specialty, style: const TextStyle(fontSize: 16)),
+                      ],
+                    ),
+                  ))
+            else
+              const Text("Nenhuma especialidade listada."),
           ],
         ),
       ),
     );
   }
 
-  // Widget auxiliar para criar as linhas de informação
   Widget _buildInfoRow(IconData icon, String title, String subtitle) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +133,8 @@ class _BarbershopDetailViewState extends State<BarbershopDetailView> {
             children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 2),
-              Text(subtitle, style: TextStyle(fontSize: 15, color: Colors.grey[700])),
+              Text(subtitle,
+                  style: TextStyle(fontSize: 15, color: Colors.grey[700])),
             ],
           ),
         ),

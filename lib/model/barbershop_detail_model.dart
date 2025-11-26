@@ -7,8 +7,12 @@ class BarbershopDetail {
   final String address;
   final String cityState;
   final String zipCode;
-  final String rating;
-  final String reviewCount;
+  final String barberName;
+  final String barberSpecialty;
+  final String barberImageUrl;
+  final List<String> specialties;
+  // final String rating;
+  // final String reviewCount;
 
   BarbershopDetail({
     required this.name,
@@ -18,7 +22,11 @@ class BarbershopDetail {
     required this.address,
     required this.cityState,
     required this.zipCode,
-    required this.rating,
-    required this.reviewCount,
+    this.barberName = '',
+    this.barberSpecialty = '',
+    this.barberImageUrl = '',
+    this.specialties = const [],
+    // required this.rating,
+    // required this.reviewCount,
   });
 }

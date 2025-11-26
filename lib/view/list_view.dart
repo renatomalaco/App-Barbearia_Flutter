@@ -196,6 +196,7 @@ class _ListsViewState extends State<ListsView> {
                   itemBuilder: (context, index) {
                     // Pega o documento atual
                     final doc = data.docs[index];
+                    final dataMap = doc.data() as Map<String, dynamic>;
                     
                     // Converte os dados do Firestore para o seu Modelo
                     // IMPORTANTE: Certifique-se de que os nomes dos campos aqui ('name', 'address', etc.)
@@ -208,6 +209,10 @@ class _ListsViewState extends State<ListsView> {
                       zipCode: doc['zipCode'],
                       imageUrl: doc['imageUrl'],
                       openingHours: doc['openingHours'],
+                      barberName: dataMap['barberName'] ?? 'Barbeiro', 
+                      barberSpecialty: dataMap['barberSpecialty'] ?? 'Especialista',
+                      barberImageUrl: dataMap['barberImageUrl'] ?? '',
+                      specialties: (dataMap['specialties'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? ['Corte'],
                     );
                     
                     return _BarbershopCard(barbershop: barbershop);
@@ -274,7 +279,7 @@ class _BarbershopCardState extends State<_BarbershopCard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => BarbershopDetailView(barbershopName: widget.barbershop.name),
+              builder: (context) => BarbershopDetailView(barbershop: widget.barbershop),
             ),
           );
         },

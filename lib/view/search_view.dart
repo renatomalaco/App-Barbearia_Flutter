@@ -89,6 +89,7 @@ class _SearchViewState extends State<SearchView> {
                   itemCount: data.size,
                   itemBuilder: (context, index) {
                     final doc = data.docs[index];
+                    final dataMap = doc.data() as Map<String, dynamic>;
                     
                     // Conversão do documento para o Modelo (igual na ListView)
                     final barbershop = Barbershop(
@@ -99,6 +100,10 @@ class _SearchViewState extends State<SearchView> {
                       zipCode: doc['zipCode'],
                       imageUrl: doc['imageUrl'],
                       openingHours: doc['openingHours'],
+                      barberName: dataMap['barberName'] ?? 'Barbeiro', 
+                      barberSpecialty: dataMap['barberSpecialty'] ?? 'Especialista',
+                      barberImageUrl: dataMap['barberImageUrl'] ?? '',
+                      specialties: (dataMap['specialties'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? ['Corte'],
                     );
 
                     return ListTile(
@@ -111,7 +116,7 @@ class _SearchViewState extends State<SearchView> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => BarbershopDetailView(barbershopName: barbershop.name),
+                            builder: (context) => BarbershopDetailView(barbershop: barbershop),
                           ),
                         );
                       },

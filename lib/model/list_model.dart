@@ -6,6 +6,10 @@ class Barbershop {
   final String zipCode;
   final String imageUrl;
   final String openingHours;
+  final String barberName;
+  final String barberSpecialty;
+  final String barberImageUrl;
+  final List<String> specialties;
 
   Barbershop({
     required this.name,
@@ -15,5 +19,9 @@ class Barbershop {
     required this.zipCode,
     required this.imageUrl,
     required this.openingHours,
+    this.barberName = '',
+    this.barberSpecialty = '',
+    this.barberImageUrl = '',
+    this.specialties = const [],
   });
 }
