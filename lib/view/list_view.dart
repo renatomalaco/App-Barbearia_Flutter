@@ -23,7 +23,7 @@ class _ListsViewState extends State<ListsView> {
   int _selectedIndex = 0;
 
   // Manter o controller da sua lista original
-  final _controller = ListController();
+  // final _controller = ListController();
 
   // ADICIONADO: Lista de telas que serão navegadas
   late final List<Widget> _pages;
@@ -191,7 +191,7 @@ class _ListsViewState extends State<ListsView> {
                 final data = snapshot.requireData;
 
                 return ListView.builder(
-                  controller: _controller.scrollController,
+                  // controller: _controller.scrollController,
                   itemCount: data.size,
                   itemBuilder: (context, index) {
                     // Pega o documento atual
@@ -202,6 +202,7 @@ class _ListsViewState extends State<ListsView> {
                     // IMPORTANTE: Certifique-se de que os nomes dos campos aqui ('name', 'address', etc.)
                     // sejam EXATAMENTE iguais aos que você criou no Firebase Console.
                     final barbershop = Barbershop(
+                      id: doc.id,
                       name: doc['name'],
                       description: doc['description'],
                       address: doc['address'],
@@ -251,7 +252,7 @@ class _ListsViewState extends State<ListsView> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    // _controller.dispose();
     super.dispose();
   }
 }

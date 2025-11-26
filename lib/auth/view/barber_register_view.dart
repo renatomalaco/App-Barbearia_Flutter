@@ -119,7 +119,7 @@ class _BarberRegisterViewState extends State<BarberRegisterView> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Barbeiro cadastrado com sucesso!')),
       );
-      Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, 'barber_home', (route) => false);
 
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

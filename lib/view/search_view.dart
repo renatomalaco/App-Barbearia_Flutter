@@ -93,6 +93,7 @@ class _SearchViewState extends State<SearchView> {
                     
                     // Conversão do documento para o Modelo (igual na ListView)
                     final barbershop = Barbershop(
+                      id: doc.id,
                       name: doc['name'],
                       description: doc['description'],
                       address: doc['address'],

@@ -4,7 +4,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../../view/chat_view.dart'; // Para navegação
+import '../../model/list_model.dart';
+import '../../view/chat_view.dart';
 
 class ScheduleView extends StatefulWidget {
   const ScheduleView({super.key});
@@ -24,114 +25,11 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  // --- MODAL 1: ADICIONAR AGENDAMENTO ---
-  void _showAddAppointmentDialog() {
-    final _formKey = GlobalKey<FormState>();
-    String? selectedBarber;
-    String? selectedService = 'Corte Simples';
-    TimeOfDay selectedTime = TimeOfDay.now();
-    
-    final List<String> barbers = ['Jhon Cortes', 'Marcos da Navalha', 'Barbearia Old School'];
-    final List<String> services = ['Corte Simples', 'Barba', 'Completo'];
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Novo Agendamento', style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)),
-          content: StatefulBuilder(
-            builder: (context, setStateModal) {
-              return Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Barbeiro'),
-                      items: barbers.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                      onChanged: (v) => selectedBarber = v,
-                      validator: (v) => v == null ? 'Selecione um barbeiro' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      value: selectedService,
-                      decoration: const InputDecoration(labelText: 'Serviço'),
-                      items: services.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                      onChanged: (v) => selectedService = v,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time),
-                        const SizedBox(width: 10),
-                        TextButton(
-                          onPressed: () async {
-                            final time = await showTimePicker(context: context, initialTime: selectedTime);
-                            if (time != null) setStateModal(() => selectedTime = time);
-                          },
-                          child: Text(selectedTime.format(context), style: const TextStyle(fontSize: 16)),
-                        ),
-                      ],
-                    )
-                  ],
-                ),
-              );
-            },
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF844333)),
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  await _saveAppointment(selectedBarber!, selectedService!, selectedTime);
-                  if (mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('Agendar', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _saveAppointment(String barber, String service, TimeOfDay time) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final DateTime fullDate = DateTime(
-      _selectedDay.year, _selectedDay.month, _selectedDay.day, time.hour, time.minute
-    );
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('appointments')
-        .add({
-      'barberName': barber,
-      'service': service,
-      'date': Timestamp.fromDate(fullDate),
-      'status': 'agendado',
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Agendado com sucesso!")));
-    }
-  }
-
   // --- FUNÇÃO PARA APAGAR (DESMARCAR) ---
   Future<void> _deleteAppointment(String docId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Mostra confirmação antes de apagar
     bool confirm = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -145,12 +43,17 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
     ) ?? false;
 
     if (confirm) {
+      // Apaga da coleção do usuário
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('appointments')
           .doc(docId)
           .delete();
+      
+      // Nota: Para apagar da coleção do Barbeiro, precisaríamos ter salvo o ID 
+      // do documento do barbeiro no documento do usuário. 
+      // Por enquanto, apagamos apenas a visualização do cliente.
 
       if (mounted) {
         Navigator.pop(context); // Fecha o modal de detalhes
@@ -159,7 +62,7 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
     }
   }
 
-  // --- MODAL 2: VER DETALHES (COM OPÇÃO DESMARCAR) ---
+  // --- MODAL DE DETALHES (AO CLICAR NO CARD) ---
   void _showAppointmentDetails(String docId, Map<String, dynamic> data) {
     final date = (data['date'] as Timestamp).toDate();
     final timeString = DateFormat('HH:mm').format(date);
@@ -170,18 +73,7 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
       builder: (context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: Row(
-            children: [
-              const Icon(Icons.event_available, color: Color(0xFF844333)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  data['barberName'] ?? 'Barbeiro', 
-                  style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)
-                ),
-              ),
-            ],
-          ),
+          title: Text(data['barberName'] ?? 'Barbeiro', style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,33 +87,183 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
             ],
           ),
           actions: [
-            // BOTÃO DESMARCAR (NOVO)
             TextButton(
               onPressed: () => _deleteAppointment(docId),
-              child: Text("Desmarcar", style: GoogleFonts.baloo2(color: Colors.red, fontWeight: FontWeight.bold)),
+              child: Text("Desmarcar", style: GoogleFonts.baloo2(color: Colors.red)),
             ),
-            // BOTÃO FECHAR (MANTIDO)
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Fechar"),
             ),
-            // BOTÃO MENSAGEM (MANTIDO)
-            ElevatedButton.icon(
+            ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF844333)),
-              icon: const Icon(Icons.chat, color: Colors.white, size: 18),
-              label: const Text("Mensagem", style: TextStyle(color: Colors.white)),
               onPressed: () {
-                Navigator.pop(context); 
+                Navigator.pop(context);
+                final barberUid = data['barberUid'];
+                final barberName = data['barberName'] ?? 'Barbeiro';
+
+                if (barberUid == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Este agendamento antigo não tem o ID do barbeiro. Crie um novo."))
+                  );
+                  return;
+                }
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => ChatView(
-                      chatName: data['barberName'],
+                      chatId: barberUid, // Aqui vai o ID do Barbeiro
+                      title: barberName,
                       avatarUrl: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                      
+                        isBarberView: false, // É FALSO porque quem está clicando é o Cliente
                     ),
                   ),
                 );
               },
+              child: const Text("Mensagem", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- SALVAR AGENDAMENTO ---
+  Future<void> _saveAppointment(Barbershop shop, String service, TimeOfDay time) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final DateTime fullDate = DateTime(
+      _selectedDay.year, _selectedDay.month, _selectedDay.day, time.hour, time.minute
+    );
+
+    final appointmentData = {
+      'clientUid': user.uid,
+      'clientName': user.displayName ?? 'Cliente', // Tenta pegar o nome do Auth ou usa padrão
+      'barberUid': shop.id,
+      'barberName': shop.name,
+      'service': service,
+      'date': Timestamp.fromDate(fullDate),
+      'status': 'agendado',
+    };
+
+    try {
+      // 1. Salvar no Cliente
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('appointments')
+          .add(appointmentData);
+
+      // 2. Salvar no Barbeiro
+      await FirebaseFirestore.instance
+          .collection('barbershops')
+          .doc(shop.id)
+          .collection('appointments')
+          .add(appointmentData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Agendado com sucesso!")));
+        Navigator.pop(context); // Fecha o modal de agendamento
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+    }
+  }
+
+  // --- MODAL DE NOVO AGENDAMENTO ---
+  void _showAddAppointmentDialog() {
+    final _formKey = GlobalKey<FormState>();
+    Barbershop? selectedBarber;
+    String? selectedService;
+    TimeOfDay selectedTime = TimeOfDay.now();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Novo Agendamento', style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)),
+          content: StatefulBuilder(
+            builder: (context, setStateModal) {
+              return SizedBox(
+                width: double.maxFinite,
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('barbershops').snapshots(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const LinearProgressIndicator();
+                          
+                          List<DropdownMenuItem<Barbershop>> items = [];
+                          for (var doc in snapshot.data!.docs) {
+                             final data = doc.data() as Map<String, dynamic>;
+                             // Cria o objeto com ID para o operador == funcionar
+                             final b = Barbershop(
+                               id: doc.id,
+                               name: data['name'] ?? 'Sem Nome',
+                               description: '', address: '', cityState: '', zipCode: '', imageUrl: '', openingHours: '',
+                               specialties: List<String>.from(data['specialties'] ?? [])
+                             );
+                             items.add(DropdownMenuItem(value: b, child: Text(b.name, overflow: TextOverflow.ellipsis)));
+                          }
+
+                          return DropdownButtonFormField<Barbershop>(
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Barbeiro'),
+                            items: items,
+                            value: selectedBarber, // O operador == no model fará isso funcionar
+                            onChanged: (v) {
+                              setStateModal(() {
+                                selectedBarber = v;
+                                selectedService = null;
+                              });
+                            },
+                            validator: (v) => v == null ? 'Selecione um barbeiro' : null,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      
+                      if (selectedBarber != null)
+                        DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          value: selectedService,
+                          decoration: const InputDecoration(labelText: 'Serviço'),
+                          items: selectedBarber!.specialties.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                          onChanged: (v) => setStateModal(() => selectedService = v),
+                          validator: (v) => v == null ? 'Selecione um serviço' : null,
+                        ),
+
+                      const SizedBox(height: 20),
+                      ListTile(
+                        title: Text("Horário: ${selectedTime.format(context)}"),
+                        trailing: const Icon(Icons.access_time),
+                        onTap: () async {
+                          final time = await showTimePicker(context: context, initialTime: selectedTime);
+                          if (time != null) setStateModal(() => selectedTime = time);
+                        },
+                      )
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF844333)),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _saveAppointment(selectedBarber!, selectedService!, selectedTime);
+                }
+              },
+              child: const Text('Agendar', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -272,7 +314,7 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [_buildDayAppointments(), _buildAllHistory()],
+                children: [_buildAppointmentsList(true), _buildAppointmentsList(false)],
               ),
             ),
           ],
@@ -281,75 +323,48 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildDayAppointments() {
+  Widget _buildAppointmentsList(bool isDayView) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Center(child: Text("Faça login"));
 
-    final startOfDay = Timestamp.fromDate(DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day));
-    final endOfDay = Timestamp.fromDate(DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day, 23, 59, 59));
+    Query query = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('appointments')
+        .orderBy('date', descending: !isDayView); 
+
+    if (isDayView) {
+      final start = Timestamp.fromDate(DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day));
+      final end = Timestamp.fromDate(DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day, 23, 59, 59));
+      query = query.where('date', isGreaterThanOrEqualTo: start).where('date', isLessThanOrEqualTo: end);
+    }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('appointments')
-          .where('date', isGreaterThanOrEqualTo: startOfDay)
-          .where('date', isLessThanOrEqualTo: endOfDay)
-          .snapshots(),
+      stream: query.snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return Center(child: Text("Erro: ${snapshot.error}"));
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        
         final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text("Sem agendamentos."));
+        if (docs.isEmpty) return const Center(child: Text("Nenhum agendamento."));
 
         return ListView.builder(
           itemCount: docs.length,
           itemBuilder: (context, index) {
-            final doc = docs[index]; // Pega o documento
+            final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
-            final docId = doc.id; // Pega o ID
-
-            return GestureDetector(
-              onTap: () => _showAppointmentDetails(docId, data), // Passa o ID e os dados
-              child: Card(
-                margin: const EdgeInsets.all(8),
-                child: ListTile(
-                  leading: const Icon(Icons.cut, color: Color(0xFF844333)),
-                  title: Text(data['service']),
-                  subtitle: Text(data['barberName']),
-                  trailing: Text(DateFormat('HH:mm').format((data['date'] as Timestamp).toDate())),
-                ),
+            final date = (data['date'] as Timestamp).toDate();
+            
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                // --- AQUI ESTA A CORREÇÃO DO CLIQUE NOS CARDS ---
+                onTap: () => _showAppointmentDetails(doc.id, data), 
+                leading: const Icon(Icons.content_cut, color: Color(0xFF844333)),
+                title: Text(data['service'], style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)),
+                subtitle: Text("${data['barberName']} - ${DateFormat('dd/MM HH:mm').format(date)}"),
+                trailing: Text(data['status'].toString().toUpperCase(), style: GoogleFonts.baloo2(fontSize: 12)),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildAllHistory() {
-     final user = FirebaseAuth.instance.currentUser;
-     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(user!.uid)
-          .collection('appointments')
-          .orderBy('date', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
-        final docs = snapshot.data!.docs;
-        return ListView.builder(
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final doc = docs[index]; // Pega o documento
-            final data = doc.data() as Map<String, dynamic>;
-            final docId = doc.id; // Pega o ID
-
-            return ListTile(
-              title: Text(data['service']),
-              subtitle: Text(DateFormat('dd/MM - HH:mm').format((data['date'] as Timestamp).toDate())),
-              trailing: Text(data['barberName']),
-              onTap: () => _showAppointmentDetails(docId, data), // Passa o ID e os dados
             );
           },
         );

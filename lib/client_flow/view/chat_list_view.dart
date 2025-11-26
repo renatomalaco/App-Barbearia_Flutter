@@ -23,28 +23,21 @@ class ChatListView extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Text(
                 'Mensagens',
-                style: GoogleFonts.baloo2(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: GoogleFonts.baloo2(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
             const Divider(color: Colors.grey, height: 1),
             Expanded(
-              // RF005: Recuperação de dados em tempo real (Lista de Chats)
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
                     .doc(user.uid)
                     .collection('chats')
+                    .orderBy('lastUpdated', descending: true) // Ordena por mais recente
                     .snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return const Center(child: Text("Erro ao carregar conversas"));
-                  }
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  if (snapshot.hasError) return const Center(child: Text("Erro ao carregar"));
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
                   final docs = snapshot.data!.docs;
 
@@ -53,8 +46,7 @@ class ChatListView extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Text(
-                          "Nenhuma conversa iniciada.\nAgende um horário para conversar com o barbeiro.",
-                          textAlign: TextAlign.center,
+                          "Nenhuma conversa iniciada.",
                           style: GoogleFonts.baloo2(color: Colors.grey),
                         ),
                       ),
@@ -65,37 +57,31 @@ class ChatListView extends StatelessWidget {
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final chatDoc = docs[index];
-                      final chatName = chatDoc.id; // Usamos o ID do doc como nome do barbeiro por enquanto
-                      // Tenta pegar a última mensagem se existir, senão mostra texto padrão
-                      final lastMessage = (chatDoc.data() as Map<String, dynamic>).containsKey('lastMessage') 
-                          ? chatDoc['lastMessage'] 
-                          : 'Toque para ver as mensagens';
+                      final data = chatDoc.data() as Map<String, dynamic>;
+                      
+                      // Usa os campos salvos na Dupla Escrita
+                      // Se 'chatName' não existir, usa o ID do documento como fallback
+                      final chatName = data['chatName'] ?? chatDoc.id; 
+                      final lastMessage = data['lastMessage'] ?? '';
+                      final otherUid = data['otherUid'] ?? chatDoc.id; // Importante para navegar
 
                       return Column(
                         children: [
                           ListTile(
                             leading: const CircleAvatar(
                               radius: 28,
-                              // Imagem genérica pois não salvamos a foto do barbeiro no chat ainda
                               backgroundImage: NetworkImage("https://cdn-icons-png.flaticon.com/512/149/149071.png"),
                             ),
-                            title: Text(
-                              chatName,
-                              style: GoogleFonts.baloo2(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              lastMessage,
-                              style: GoogleFonts.baloo2(),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            title: Text(chatName, style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)),
+                            subtitle: Text(lastMessage, style: GoogleFonts.baloo2(), overflow: TextOverflow.ellipsis),
                             trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
                             onTap: () {
-                              // Navega para a tela de conversa individual
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => ChatView(
-                                    chatName: chatName,
+                                    chatId: otherUid, // Usa o ID correto
+                                    title: chatName,
                                     avatarUrl: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                                   ),
                                 ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Necessário para ler o userType
 
 class LoginView extends StatefulWidget {
-  final String userType;
+  final String userType; // Mantemos, mas agora a lógica real vem do banco
 
   const LoginView({super.key, required this.userType});
 
@@ -12,7 +13,6 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -26,27 +26,50 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
-  // --- LÓGICA DO LOGIN (RF001) ---
+  // --- LÓGICA DE LOGIN E ROTEAMENTO (Atualizada) ---
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // 1. Autenticação
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
+      if (userCredential.user == null) throw Exception("Erro na autenticação");
+
+      // 2. Verificação do Tipo de Usuário no Firestore
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
+
       if (!mounted) return;
 
-      // Login bem sucedido, vai para a lista
-      Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false);
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final String role = data['userType'] ?? 'client'; // Padrão é client
+
+        // 3. Redirecionamento baseado na role
+        if (role == 'barber') {
+          Navigator.pushNamedAndRemoveUntil(context, 'barber_home', (route) => false);
+        } else {
+          Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false);
+        }
+      } else {
+        // Caso de borda: Usuário no Auth mas sem doc no Firestore
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Perfil de usuário não encontrado.')),
+        );
+      }
       
     } on FirebaseAuthException catch (e) {
       String message = 'Erro ao fazer login.';
-      if (e.code == 'user-not-found') {
-        message = 'Usuário não encontrado.';
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        message = 'E-mail ou senha incorretos.'; // Mensagem de segurança genérica
       } else if (e.code == 'wrong-password') {
         message = 'Senha incorreta.';
       }
@@ -56,6 +79,12 @@ class _LoginViewState extends State<LoginView> {
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro inesperado: $e'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -63,6 +92,8 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
+    // O layout permanece o mesmo que você já tinha, mantendo o botão de "Entrar"
+    // conectado à função _login atualizada acima.
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -82,38 +113,19 @@ class _LoginViewState extends State<LoginView> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 80),
-                Image.asset(
-                  'lib/images/logo.png',
-                  height: 100,
-                ),
+                Image.asset('lib/images/logo.png', height: 100),
                 const SizedBox(height: 24),
                 const Text(
                   'Bem vindo de volta',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Serif',
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'Serif'),
                 ),
                 const SizedBox(height: 48),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'E-mail',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder()),
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira seu e-mail.';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(value)) {
-                      return 'Por favor, insira um e-mail válido.';
-                    }
-                    return null;
-                  },
+                  validator: (value) => (value == null || value.isEmpty) ? 'Insira seu e-mail.' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -123,30 +135,17 @@ class _LoginViewState extends State<LoginView> {
                     labelText: 'Sua senha',
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      icon: Icon(_isPasswordObscured
-                          ? Icons.visibility
-                          : Icons.visibility_off),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordObscured = !_isPasswordObscured;
-                        });
-                      },
+                      icon: Icon(_isPasswordObscured ? Icons.visibility : Icons.visibility_off),
+                      onPressed: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira sua senha.';
-                    }
-                    return null;
-                  },
+                  validator: (value) => (value == null || value.isEmpty) ? 'Insira sua senha.' : null,
                 ),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, 'forgot_password');
-                    },
+                    onPressed: () => Navigator.pushNamed(context, 'forgot_password'),
                     child: const Text('Esqueceu sua senha?'),
                   ),
                 ),
@@ -155,22 +154,12 @@ class _LoginViewState extends State<LoginView> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF844333),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
                   ),
                   onPressed: _isLoading ? null : _login,
                   child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Entrar',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Entrar', style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
                 const SizedBox(height: 40),
                 Row(
@@ -179,6 +168,7 @@ class _LoginViewState extends State<LoginView> {
                     const Text('Não tem uma conta?'),
                     TextButton(
                       onPressed: () {
+                        // Mantém a lógica visual, mas o registro real define o userType
                         if (widget.userType == 'client') {
                           Navigator.pushNamed(context, 'register');
                         } else {

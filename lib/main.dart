@@ -16,6 +16,7 @@ import 'client_flow/view/schedule_view.dart';
 import 'view/about_view.dart';
 import 'client_flow/view/edit_profile_view.dart';
 import '../view/theme_service.dart';
+import 'barber_flow/view/barber_main_view.dart';
 
 final g = GetIt.instance;
 
@@ -66,6 +67,7 @@ class MainApp extends StatelessWidget {
             'config': (context) => const ConfigView(),
             'list': (context) => const ListsView(), 
             'edit_profile': (context) => const EditProfileView(),
+            'barber_home': (context) => const BarberMainView(),
           },
           onGenerateRoute: (settings) {
             if (settings.name == 'login') {
