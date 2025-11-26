@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginView extends StatefulWidget {
   final String userType;
@@ -16,6 +17,7 @@ class _LoginViewState extends State<LoginView> {
   final _passwordController = TextEditingController();
 
   bool _isPasswordObscured = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -24,11 +26,45 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
+  // --- LÓGICA DO LOGIN (RF001) ---
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      // Login bem sucedido, vai para a lista
+      Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false);
+      
+    } on FirebaseAuthException catch (e) {
+      String message = 'Erro ao fazer login.';
+      if (e.code == 'user-not-found') {
+        message = 'Usuário não encontrado.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Senha incorreta.';
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Adiciona um botão de "voltar" que retorna para a tela anterior (Welcome)
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -47,7 +83,7 @@ class _LoginViewState extends State<LoginView> {
               children: [
                 const SizedBox(height: 80),
                 Image.asset(
-                  'lib/images/logo.png', 
+                  'lib/images/logo.png',
                   height: 100,
                 ),
                 const SizedBox(height: 24),
@@ -61,7 +97,6 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
                 const SizedBox(height: 48),
-                // RF001: Campo para informar o e-mail.
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -70,32 +105,28 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    // RF001: Verifica se o campo não está vazio.
                     if (value == null || value.isEmpty) {
                       return 'Por favor, insira seu e-mail.';
                     }
-                    // RF001: Verifica se o e-mail é válido (validação simples).
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                        .hasMatch(value)) {
                       return 'Por favor, insira um e-mail válido.';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // RF001: Campo para informar a senha.
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: _isPasswordObscured, // Oculta o texto da senha
+                  obscureText: _isPasswordObscured,
                   decoration: InputDecoration(
                     labelText: 'Sua senha',
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordObscured ? Icons.visibility : Icons.visibility_off,
-                      ),
+                      icon: Icon(_isPasswordObscured
+                          ? Icons.visibility
+                          : Icons.visibility_off),
                       onPressed: () {
-                        // Altera o estado para mostrar/ocultar a senha.
                         setState(() {
                           _isPasswordObscured = !_isPasswordObscured;
                         });
@@ -103,7 +134,6 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   validator: (value) {
-                    // RF001: Verifica se o campo não está vazio.
                     if (value == null || value.isEmpty) {
                       return 'Por favor, insira sua senha.';
                     }
@@ -111,59 +141,44 @@ class _LoginViewState extends State<LoginView> {
                   },
                 ),
                 const SizedBox(height: 8),
-
-                // RF001: Acesso à funcionalidade "Esqueceu a senha?".
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // Navega para a tela de recuperação de senha.
                       Navigator.pushNamed(context, 'forgot_password');
                     },
                     child: const Text('Esqueceu sua senha?'),
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // RF001: Botão para "entrar" no aplicativo.
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF844333), // Cor do Figma
+                    backgroundColor: const Color(0xFF844333),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
-                  onPressed: () {
-                    // Aciona a validação de todos os TextFormField do formulário.
-                    if (_formKey.currentState!.validate()) {
-                      // Lógica de navegação baseada no tipo de usuário
-                      if (widget.userType == 'barber') {
-                        // Navega para o fluxo do barbeiro
-                        Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false);
-                      } else {
-                        // Navega para o fluxo do cliente (ainda a ser criado)
-                        // Por enquanto, vamos usar uma rota placeholder que precisa ser criada
-                        // TODO: Criar a rota e a tela 'client_home'
-                        Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false); // Temporariamente para 'list'
-                      }
-                    }
-                  },
-                  child: const Text(
-                    'Entrar',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
+                  onPressed: _isLoading ? null : _login,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Entrar',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
                 ),
                 const SizedBox(height: 40),
-
-                // RF001: Acesso à funcionalidade de Cadastro de Usuário.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('Não tem uma conta?'),
                     TextButton(
                       onPressed: () {
-                        // Navega para a tela de cadastro correta
                         if (widget.userType == 'client') {
                           Navigator.pushNamed(context, 'register');
                         } else {

@@ -1,3 +1,5 @@
+import 'package:barbado/view/search_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controller/list_controller.dart';
@@ -30,7 +32,6 @@ class _ListsViewState extends State<ListsView> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
-    _controller.loadBarbershops();
 
     // A lista de páginas agora é inicializada aqui
     _pages = [
@@ -63,44 +64,44 @@ class _ListsViewState extends State<ListsView> {
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
+            icon: const Padding(
+              padding: EdgeInsets.only(top: 4.0),
               child: Icon(Icons.home_outlined),
             ),
-            activeIcon: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
+            activeIcon: const Padding(
+              padding: EdgeInsets.only(top: 4.0),
               child: Icon(Icons.home),
             ), // Ícone quando ativo
             label: 'Início',
           ),
           BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
+            icon: const Padding(
+              padding: EdgeInsets.only(top: 4.0),
               child: Icon(Icons.calendar_today_outlined),
             ),
-            activeIcon: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
+            activeIcon: const Padding(
+              padding: EdgeInsets.only(top: 4.0),
               child: Icon(Icons.calendar_today),
             ),
             label: 'Agenda',
           ),
           BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
+            icon: const Padding(
+              padding: EdgeInsets.only(top: 4.0),
               child: Icon(Icons.chat_bubble_outline),
             ),
-            activeIcon: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
+            activeIcon: const Padding(
+              padding: EdgeInsets.only(top: 4.0),
               child: Icon(Icons.chat_bubble),
             ),
             label: 'Chat',
           ),
           BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
+            icon: const Padding(
+              padding: EdgeInsets.only(top: 4.0),
               child: Icon(Icons.settings_outlined),
             ),
-            activeIcon: Padding(padding: const EdgeInsets.only(top: 4.0), child: Icon(Icons.settings)),
+            activeIcon: const Padding(padding: EdgeInsets.only(top: 4.0), child: Icon(Icons.settings)),
             label: 'Configurações',
           ),
         ],
@@ -136,16 +137,26 @@ class _ListsViewState extends State<ListsView> {
                         Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
                       },
                     ),
+                    // --- NOVO BOTÃO DE PESQUISA ---
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SearchView()),
+                        );
+                      },
+                    ),
+
                     GestureDetector(
                       onTap: () {
                         Navigator.pushNamed(context, 'edit_profile');
                       },
                       child: const CircleAvatar(
-                        backgroundImage: NetworkImage('https://media.discordapp.net/attachments/1249450843002896516/1428545035283992586/jsus_cristo.png?ex=68f2e3bd&is=68f1923d&hm=060b3bddd2cf74cfcdeffa521b00f4c6492013281478d3e2976bcc613d1f822c&=&format=webp&quality=lossless&width=786&height=810'), // Imagem de perfil de exemplo
                       ),
                     ),
                   ],
-                ),
+                ),  
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -160,14 +171,45 @@ class _ListsViewState extends State<ListsView> {
             ),
           ),
           Expanded(
-            child: ValueListenableBuilder<List<Barbershop>>(
-              valueListenable: _controller.barbershops,
-              builder: (context, barbershops, child) {
+            child: StreamBuilder<QuerySnapshot>(
+              // Conecta na coleção 'barbershops' do Firestore
+              stream: FirebaseFirestore.instance.collection('barbershops').snapshots(),
+              builder: (context, snapshot) {
+                // Tratamento de erros e carregamento
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Erro ao carregar dados'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                // Se não tiver dados ou a lista estiver vazia
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('Nenhuma barbearia encontrada'));
+                }
+
+                final data = snapshot.requireData;
+
                 return ListView.builder(
                   controller: _controller.scrollController,
-                  itemCount: barbershops.length,
+                  itemCount: data.size,
                   itemBuilder: (context, index) {
-                    final barbershop = barbershops[index];
+                    // Pega o documento atual
+                    final doc = data.docs[index];
+                    
+                    // Converte os dados do Firestore para o seu Modelo
+                    // IMPORTANTE: Certifique-se de que os nomes dos campos aqui ('name', 'address', etc.)
+                    // sejam EXATAMENTE iguais aos que você criou no Firebase Console.
+                    final barbershop = Barbershop(
+                      name: doc['name'],
+                      description: doc['description'],
+                      address: doc['address'],
+                      cityState: doc['cityState'],
+                      zipCode: doc['zipCode'],
+                      imageUrl: doc['imageUrl'],
+                      openingHours: doc['openingHours'],
+                    );
+                    
                     return _BarbershopCard(barbershop: barbershop);
                   },
                 );

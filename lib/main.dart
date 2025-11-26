@@ -2,7 +2,9 @@ import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import 'firebase_options.dart';
 import 'auth/view/forgot_password_view.dart';
 import 'auth/view/login_view.dart';
 import 'auth/view/register_view.dart';
@@ -22,7 +24,12 @@ void setupDependencies() {
   g.registerSingleton<ThemeService>(ThemeService());
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   setupDependencies();
   initializeDateFormatting('pt_BR', null).then((_) {
     runApp(

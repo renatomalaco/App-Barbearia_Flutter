@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "588812015480",
+    "project_id": "barber-connect1",
+    "storage_bucket": "barber-connect1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588812015480:android:e8d5f8b4dcb5ba9c75da8d",
+        "android_client_info": {
+          "package_name": "com.example.barbado"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJMiutd-hlSHeT7SQr8_rcTVDVk85uIhY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
