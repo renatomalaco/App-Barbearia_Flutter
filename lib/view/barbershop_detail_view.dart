@@ -90,23 +90,23 @@ class _BarbershopDetailViewState extends State<BarbershopDetailView> {
 
                   const SizedBox(height: 32),
 
-                  // --- BOTÃO MOVIDO PARA CÁ ---
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF844333),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () {
-                        // Lógica para abrir modal de agendamento (Pode ser implementada aqui ou navegar para outra tela)
-                        // Sugestão: Passar o ID do barbeiro para a ScheduleView ou abrir um modal aqui mesmo.
-                        Navigator.pushNamed(context, 'agenda', arguments: shop);
-                      },
-                      child: Text('AGENDAR HORÁRIO', style: GoogleFonts.baloo2(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                  ),
+                  // --- BOTÃO MOVIDO PARA CÁ --- (colocar saida futuramente)
+                  // SizedBox(
+                  //   width: double.infinity,
+                  //   height: 50,
+                  //   child: ElevatedButton(
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: const Color(0xFF844333),
+                  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  //     ),
+                  //     onPressed: () {
+                  //       // Lógica para abrir modal de agendamento (Pode ser implementada aqui ou navegar para outra tela)
+                  //       // Sugestão: Passar o ID do barbeiro para a ScheduleView ou abrir um modal aqui mesmo.
+                  //       Navigator.pushNamed(context, 'agenda', arguments: shop);
+                  //     },
+                  //     child: Text('AGENDAR HORÁRIO', style: GoogleFonts.baloo2(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
