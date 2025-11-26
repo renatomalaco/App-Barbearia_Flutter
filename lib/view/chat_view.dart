@@ -4,17 +4,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatView extends StatefulWidget {
-  final String chatId; // ID do Outro Usuário
-  final String title;
+  final String chatId; // ID do Destinatário (Barbeiro ou Cliente)
+  final String title;  // Nome do Destinatário (Para o título da tela)
   final String avatarUrl;
-  final bool isBarberView; // Define quem está enviando
+  final bool isBarberView; // Define se quem está usando é o Barbeiro
 
   const ChatView({
     super.key,
     required this.chatId,
     required this.title,
     required this.avatarUrl,
-    this.isBarberView = false, // Padrão false (Cliente)
+    this.isBarberView = false,
   });
 
   @override
@@ -35,41 +35,67 @@ class _ChatViewState extends State<ChatView> {
     if (user != null) {
       final timestamp = FieldValue.serverTimestamp();
       
-      // LÓGICA DE IDENTIFICAÇÃO
-      // Se sou Cliente (false): clientUid sou Eu, barberUid é o ChatId
-      // Se sou Barbeiro (true): clientUid é o ChatId, barberUid sou Eu
+      // Identifica os IDs corretos
       final String clientUid = widget.isBarberView ? widget.chatId : user.uid;
       final String barberUid = widget.isBarberView ? user.uid : widget.chatId;
-      
-      final messageData = {
-        'text': text,
-        'senderId': user.uid,
-        'timestamp': timestamp,
-      };
 
       try {
-        // 1. Grava na caixa do CLIENTE
-        final clientRef = _firestore.collection('users').doc(clientUid).collection('chats').doc(barberUid);
-        await clientRef.collection('messages').add(messageData);
-        await clientRef.set({
+        // 1. BUSCA O NOME DO REMETENTE NO BANCO PARA NÃO FICAR GENÉRICO
+        // Se eu sou o cliente (Renato), busco meu nome na coleção 'users'
+        // Se eu sou o barbeiro (Kleber), busco na 'barbershops'
+        String senderName = user.displayName ?? 'Usuário';
+        
+        final userDoc = await _firestore
+            .collection(widget.isBarberView ? 'barbershops' : 'users')
+            .doc(user.uid)
+            .get();
+            
+        if (userDoc.exists) {
+          senderName = userDoc.data()?['name'] ?? senderName;
+        }
+
+        // Dados da mensagem
+        final messageData = {
+          'text': text,
+          'senderId': user.uid,
+          'senderName': senderName, // Agora envia "Renato" corretamente
+          'timestamp': timestamp,
+        };
+
+        // --- GRAVAÇÃO DUPLA (Para aparecer nos dois celulares) ---
+
+        // 1. Caixa do Cliente (Para Renato ver o histórico)
+        final clientChatRef = _firestore
+            .collection('users')
+            .doc(clientUid)
+            .collection('chats')
+            .doc(barberUid);
+
+        await clientChatRef.collection('messages').add(messageData);
+        await clientChatRef.set({
           'lastMessage': text,
           'lastUpdated': timestamp,
-          'chatName': widget.isBarberView ? 'Barbearia' : widget.title,
-          'otherUid': barberUid, // ID para o cliente navegar
+          'chatName': widget.isBarberView ? 'Barbearia (Você)' : widget.title, 
+          'otherUid': barberUid,
         }, SetOptions(merge: true));
 
-        // 2. Grava na caixa do BARBEIRO (Isso faz a mensagem aparecer para o Kleber)
-        final barberRef = _firestore.collection('barbershops').doc(barberUid).collection('chats').doc(clientUid);
-        await barberRef.collection('messages').add(messageData);
-        await barberRef.set({
+        // 2. Caixa do Barbeiro (Para Kleber receber a mensagem)
+        final barberChatRef = _firestore
+            .collection('barbershops')
+            .doc(barberUid)
+            .collection('chats')
+            .doc(clientUid);
+
+        await barberChatRef.collection('messages').add(messageData);
+        await barberChatRef.set({
           'lastMessage': text,
           'lastUpdated': timestamp,
-          'clientName': widget.isBarberView ? widget.title : (user.displayName ?? 'Cliente'),
-          'clientUid': clientUid, // ID para o barbeiro navegar
+          'clientName': widget.isBarberView ? widget.title : senderName, // Garante que Kleber veja "Renato"
+          'clientUid': clientUid,
         }, SetOptions(merge: true));
 
       } catch (e) {
-        print("Erro: $e");
+        print("Erro ao enviar: $e");
       }
     }
   }
@@ -79,13 +105,13 @@ class _ChatViewState extends State<ChatView> {
     final user = _auth.currentUser;
     if (user == null) return const SizedBox();
 
-    // Define qual coleção ler para montar a tela
+    // Define de onde ler as mensagens
     Query query;
     if (widget.isBarberView) {
-      // Barbeiro lê da sua caixa
+      // Barbeiro lendo sua própria caixa
       query = _firestore.collection('barbershops').doc(user.uid).collection('chats').doc(widget.chatId).collection('messages');
     } else {
-      // Cliente lê da sua caixa
+      // Cliente lendo sua própria caixa
       query = _firestore.collection('users').doc(user.uid).collection('chats').doc(widget.chatId).collection('messages');
     }
 
@@ -105,14 +131,14 @@ class _ChatViewState extends State<ChatView> {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 final docs = snapshot.data!.docs;
                 
-                if (docs.isEmpty) return Center(child: Text("Sem mensagens", style: GoogleFonts.baloo2(color: Colors.grey)));
+                if (docs.isEmpty) return Center(child: Text("Diga olá para ${widget.title}!", style: GoogleFonts.baloo2(color: Colors.grey)));
 
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final data = docs[index].data() as Map<String, dynamic>;
                     final isMe = data['senderId'] == user.uid;
-                    return _buildMessageBubble(data['text'], isMe);
+                    return _buildMessageBubble(data['text'] ?? '', isMe);
                   },
                 );
               },
@@ -148,7 +174,7 @@ class _ChatViewState extends State<ChatView> {
             child: TextField(
               controller: _textController,
               decoration: InputDecoration(
-                hintText: 'Digite...',
+                hintText: 'Digite uma mensagem...',
                 filled: true,
                 fillColor: Colors.grey[200],
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),

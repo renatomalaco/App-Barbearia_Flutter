@@ -2,7 +2,7 @@ import 'package:barbado/view/search_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../controller/list_controller.dart';
+// import '../controller/list_controller.dart';
 import '../model/list_model.dart';
 import '../client_flow/view/schedule_view.dart';
 import '../client_flow/view/chat_list_view.dart';
