@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../view/chat_view.dart';
 
 class ChatListView extends StatelessWidget {
@@ -7,27 +9,11 @@ class ChatListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Dados de exemplo para a lista de chats
-    final List<Map<String, String>> chatList = [
-      {
-        "name": "Jhon Cortes Clássicos",
-        "lastMessage": "Sábado às 10h está disponível. Confirmado!",
-        "time": "10:45",
-        "avatarUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop",
-      },
-      {
-        "name": "Barbearia Old School",
-        "lastMessage": "Perfeito! Te aguardo.",
-        "time": "Ontem",
-        "avatarUrl": "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YmFyYmVyc2hvcHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600",
-      },
-      {
-        "name": "Classic Cuts",
-        "lastMessage": "Você: Podemos remarcar?",
-        "time": "2d atrás",
-        "avatarUrl": "https://images.unsplash.com/photo-1693755807658-17ce5331aacb?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGJhcmJlcnNob3B8ZW58MHwwfDB8fHww&auto=format&fit=crop&q=60&w=600",
-      },
-    ];
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Center(child: Text("Faça login para ver suas mensagens"));
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -45,45 +31,81 @@ class ChatListView extends StatelessWidget {
             ),
             const Divider(color: Colors.grey, height: 1),
             Expanded(
-              child: ListView.builder(
-                itemCount: chatList.length,
-                itemBuilder: (context, index) {
-                  final chat = chatList[index];
-                  return Column(
-                    children: [
-                      ListTile(
-                        leading: CircleAvatar(
-                          radius: 28,
-                          backgroundImage: NetworkImage(chat['avatarUrl']!),
+              // RF005: Recuperação de dados em tempo real (Lista de Chats)
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('chats')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(child: Text("Erro ao carregar conversas"));
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data!.docs;
+
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          "Nenhuma conversa iniciada.\nAgende um horário para conversar com o barbeiro.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.baloo2(color: Colors.grey),
                         ),
-                        title: Text(
-                          chat['name']!,
-                          style: GoogleFonts.baloo2(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          chat['lastMessage']!,
-                          style: GoogleFonts.baloo2(),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Text(
-                          chat['time']!,
-                          style: GoogleFonts.baloo2(fontSize: 12, color: Colors.grey),
-                        ),
-                        onTap: () {
-                          // Navega para a tela de conversa individual
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatView(
-                                chatName: chat['name']!,
-                                avatarUrl: chat['avatarUrl']!,
-                              ),
-                            ),
-                          );
-                        },
                       ),
-                      const Divider(height: 1, indent: 80),
-                    ],
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final chatDoc = docs[index];
+                      final chatName = chatDoc.id; // Usamos o ID do doc como nome do barbeiro por enquanto
+                      // Tenta pegar a última mensagem se existir, senão mostra texto padrão
+                      final lastMessage = (chatDoc.data() as Map<String, dynamic>).containsKey('lastMessage') 
+                          ? chatDoc['lastMessage'] 
+                          : 'Toque para ver as mensagens';
+
+                      return Column(
+                        children: [
+                          ListTile(
+                            leading: const CircleAvatar(
+                              radius: 28,
+                              // Imagem genérica pois não salvamos a foto do barbeiro no chat ainda
+                              backgroundImage: NetworkImage("https://cdn-icons-png.flaticon.com/512/149/149071.png"),
+                            ),
+                            title: Text(
+                              chatName,
+                              style: GoogleFonts.baloo2(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(
+                              lastMessage,
+                              style: GoogleFonts.baloo2(),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                            onTap: () {
+                              // Navega para a tela de conversa individual
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChatView(
+                                    chatName: chatName,
+                                    avatarUrl: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const Divider(height: 1, indent: 80),
+                        ],
+                      );
+                    },
                   );
                 },
               ),

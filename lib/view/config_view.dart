@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 import '../controller/config_controller.dart';
 import '../model/config_model.dart';
 import '../view/theme_service.dart';
+import 'dart:io';
 
 class ConfigView extends StatefulWidget {
   const ConfigView({super.key});
@@ -48,17 +49,25 @@ class _ConfigViewState extends State<ConfigView> {
                       const SizedBox(height: 24),
                       GestureDetector(
                         onTap: () => Navigator.pushNamed(context, 'edit_profile'),
+                        // child: CircleAvatar(
+                        //   radius: 50,
+                        //   // Usando um ClipOval para garantir que a imagem fique redonda
+                        //   child: ClipOval(
+                        //     child: Image.network(
+                        //       settings.profileImageUrl,
+                        //       width: 100, // 2x o raio
+                        //       height: 100, // 2x o raio
+                        //       fit: BoxFit.cover,
+                        //     ),
+                        //   ),
+                        // ),
                         child: CircleAvatar(
                           radius: 50,
-                          // Usando um ClipOval para garantir que a imagem fique redonda
-                          child: ClipOval(
-                            child: Image.network(
-                              settings.profileImageUrl,
-                              width: 100, // 2x o raio
-                              height: 100, // 2x o raio
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                          backgroundImage: settings.profileImageUrl.isEmpty
+                              ? const AssetImage('lib/images/user.png')
+                              : (settings.profileImageUrl.startsWith('http')
+                                  ? NetworkImage(settings.profileImageUrl)
+                                  : FileImage(File(settings.profileImageUrl))) as ImageProvider,
                         ),
                       ),
                       const SizedBox(height: 12),

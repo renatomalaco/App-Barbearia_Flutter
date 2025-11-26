@@ -1,8 +1,7 @@
-// lib/client_flow/view/edit_profile_view.dart
-
 import 'package:flutter/material.dart';
 import '../controller/edit_profile_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:io';
 
 class EditProfileView extends StatefulWidget {
   const EditProfileView({super.key});
@@ -22,10 +21,18 @@ class _EditProfileViewState extends State<EditProfileView> {
   @override
   void initState() {
     super.initState();
-    final profile = _controller.userProfile.value;
-    _nameController = TextEditingController(text: profile.name);
-    _emailController = TextEditingController(text: profile.email);
-    _phoneController = TextEditingController(text: profile.phone);
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
+
+    _controller.userProfile.addListener(() {
+      if (mounted) {
+        _nameController.text = _controller.userProfile.value.name;
+        _emailController.text = _controller.userProfile.value.email;
+        _phoneController.text = _controller.userProfile.value.phone;
+        setState(() {}); 
+      }
+    });
   }
 
   @override
@@ -42,130 +49,120 @@ class _EditProfileViewState extends State<EditProfileView> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () {
-                        // Navega para a tela principal e abre a aba de configurações (índice 3)
-                        Navigator.pushNamedAndRemoveUntil(context, 'list', (route) => false,
-                            arguments: 3);
-                      },
-                    ),
-                  ),
-                  Text(
-                    'Editar Perfil',
-                    style: GoogleFonts.abyssinicaSil(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: Stack(
-                  clipBehavior: Clip.none, // Permite que o ícone saia dos limites do Stack
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: () {
-                        // TODO: Adicionar lógica para alterar a imagem de perfil aqui
-                      },
-                      child: CircleAvatar( // Círculo externo para a borda
-                        radius: 62,
-                        backgroundColor: Colors.grey.shade300,
-                        child: CircleAvatar( // Círculo interno para a imagem
-                          radius: 60,
-                          backgroundImage: NetworkImage(_controller.userProfile.value.profileImageUrl),
-                        ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                            context, 'list', (route) => false, arguments: 3),
                       ),
                     ),
-                    Positioned(
-                      bottom: -10,
-                      left: 0,
-                      right: 0,
-                      child: Icon(Icons.camera_alt_outlined, color:  Color(0xFF844333), size: 30),
+                    Text(
+                      'Editar Perfil',
+                      style: GoogleFonts.abyssinicaSil(
+                          fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 48),
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Nome Completo',
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFF844333), width: 1.0),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFF844333), width: 2.0),
-                  ),
-                ),
-                validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'E-mail',
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFF844333), width: 1.0),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFF844333), width: 2.0),
-                  ),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: InputDecoration(
-                  labelText: 'Telefone',
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFF844333), width: 1.0),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFF844333), width: 2.0),
-                  ),
-                ),
-                keyboardType: TextInputType.phone,
-                validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 80),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF844333),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5),
+                const SizedBox(height: 24),
+                Center(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      GestureDetector(
+                        onTap: _controller.pickAndUploadImage,
+                        child: ValueListenableBuilder(
+                          valueListenable: _controller.isLoading,
+                          builder: (context, loading, _) {
+                            if (loading) return const CircularProgressIndicator();
+                            
+                            // LÓGICA INSERIDA AQUI:
+                            final path = _controller.userProfile.value.profileImageUrl;
+                            ImageProvider imageProvider;
+
+                            if (path.isEmpty) {
+                              // Caso 1: Sem imagem -> Usa asset padrão
+                              imageProvider = const AssetImage('lib/images/user.png');
+                            } else if (path.startsWith('http')) {
+                              // Caso 2: URL da Web -> Usa NetworkImage
+                              imageProvider = NetworkImage(path);
+                            } else {
+                              // Caso 3: Caminho Local -> Usa FileImage (Requer dart:io)
+                              imageProvider = FileImage(File(path));
+                            }
+                            
+                            return CircleAvatar(
+                              radius: 62,
+                              backgroundColor: Colors.grey.shade300,
+                              backgroundImage: imageProvider,
+                            );
+                          },
+                        ),
+                      ),
+                      const Positioned(
+                        bottom: -10,
+                        right: 0,
+                        left: 0,
+                        child: Icon(Icons.camera_alt, color: Color(0xFF844333), size: 30),
+                      ),
+                    ],
                   ),
                 ),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // Atualiza os dados no controller antes de salvar
-                    _controller.userProfile.value.name = _nameController.text;
-                    _controller.userProfile.value.email = _emailController.text;
-                    _controller.userProfile.value.phone = _phoneController.text;
-                    _controller.saveProfile(context);
-                  }
-                },
-                child: Text(
-                  'Salvar Alterações',
-                  style: GoogleFonts.abyssinicaSil(fontSize: 18, color: Colors.white),
-                ), 
-              ),
-            ],
+
+                const SizedBox(height: 48),
+                
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Nome Completo', border: OutlineInputBorder()),
+                  onChanged: (val) => _controller.userProfile.value.name = val,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder()),
+                  onChanged: (val) => _controller.userProfile.value.email = val,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(labelText: 'Telefone', border: OutlineInputBorder()),
+                  onChanged: (val) => _controller.userProfile.value.phone = val,
+                ),
+                const SizedBox(height: 80),
+                
+                ValueListenableBuilder<bool>(
+                  valueListenable: _controller.isLoading,
+                  builder: (context, loading, child) {
+                    return ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF844333),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      onPressed: loading
+                          ? null
+                          : () {
+                              if (_formKey.currentState!.validate()) {
+                                _controller.saveProfile(context);
+                              }
+                            },
+                      child: loading
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white))
+                          : Text('Salvar Alterações', style: GoogleFonts.abyssinicaSil(fontSize: 18, color: Colors.white)),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );

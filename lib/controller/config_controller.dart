@@ -1,21 +1,49 @@
-// lib/controller/config_controller.dart
-
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/config_model.dart';
 
 class ConfigController {
-  // Usando ValueNotifier para reatividade da UI
   final ValueNotifier<BarberSettings> settings;
+
+  // Stream para ouvir mudanças no perfil em tempo real
+  Stream<DocumentSnapshot>? _userStream;
 
   ConfigController()
       : settings = ValueNotifier<BarberSettings>(
-          // Dados mocados iniciais
           BarberSettings(
-              name: 'Barbeiro Exemplo',
-              email: 'barbeiro@exemplo.com',
-              profileImageUrl:
-                  'https://media.discordapp.net/attachments/1249450843002896516/1428545035283992586/jsus_cristo.png?ex=68f2e3bd&is=68f1923d&hm=060b3bddd2cf74cfcdeffa521b00f4c6492013281478d3e2976bcc613d1f822c&=&format=webp&quality=lossless&width=786&height=810'),
-        );
+            name: 'Carregando...',
+            email: '',
+            profileImageUrl: '',
+          ),
+        ) {
+    _initRealtimeData();
+  }
+
+  void _initRealtimeData() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Escuta o documento do usuário no Firestore em tempo real (RF005)
+      _userStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots();
+
+      _userStream!.listen((snapshot) {
+        if (snapshot.exists) {
+          final data = snapshot.data() as Map<String, dynamic>;
+          settings.value = BarberSettings(
+            name: data['name'] ?? 'Usuário',
+            email: data['email'] ?? user.email ?? '',
+            // Se não tiver foto, manda string vazia para a View tratar
+            profileImageUrl: data['profileImageUrl'] ?? '',
+            notificationsEnabled: settings.value.notificationsEnabled,
+            darkModeEnabled: settings.value.darkModeEnabled,
+          );
+        }
+      });
+    }
+  }
 
   void dispose() {
     settings.dispose();

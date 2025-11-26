@@ -1,5 +1,3 @@
-// Local do arquivo: lib/controller/barbershop_detail_controller.dart
-
 import '../model/barbershop_detail_model.dart';
 
 class BarbershopDetailController {

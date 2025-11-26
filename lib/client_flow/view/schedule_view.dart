@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../controller/schedule_controller.dart';
-import '../model/schedule_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import '../../view/chat_view.dart'; // Para navegação
 
 class ScheduleView extends StatefulWidget {
   const ScheduleView({super.key});
@@ -12,99 +14,265 @@ class ScheduleView extends StatefulWidget {
 }
 
 class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderStateMixin {
-  final ScheduleController _controller = ScheduleController();
   late TabController _tabController;
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    // Define o dia selecionado inicial como o dia de hoje
-    _controller.onDaySelected(DateTime.now(), DateTime.now());
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _controller.dispose();
     super.dispose();
+  }
+
+  // --- MODAL 1: ADICIONAR AGENDAMENTO ---
+  void _showAddAppointmentDialog() {
+    final _formKey = GlobalKey<FormState>();
+    String? selectedBarber;
+    String? selectedService = 'Corte Simples';
+    TimeOfDay selectedTime = TimeOfDay.now();
+    
+    final List<String> barbers = ['Jhon Cortes', 'Marcos da Navalha', 'Barbearia Old School'];
+    final List<String> services = ['Corte Simples', 'Barba', 'Completo'];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Novo Agendamento', style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)),
+          content: StatefulBuilder(
+            builder: (context, setStateModal) {
+              return Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Barbeiro'),
+                      items: barbers.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                      onChanged: (v) => selectedBarber = v,
+                      validator: (v) => v == null ? 'Selecione um barbeiro' : null,
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: selectedService,
+                      decoration: const InputDecoration(labelText: 'Serviço'),
+                      items: services.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                      onChanged: (v) => selectedService = v,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time),
+                        const SizedBox(width: 10),
+                        TextButton(
+                          onPressed: () async {
+                            final time = await showTimePicker(context: context, initialTime: selectedTime);
+                            if (time != null) setStateModal(() => selectedTime = time);
+                          },
+                          child: Text(selectedTime.format(context), style: const TextStyle(fontSize: 16)),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF844333)),
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  await _saveAppointment(selectedBarber!, selectedService!, selectedTime);
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('Agendar', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _saveAppointment(String barber, String service, TimeOfDay time) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final DateTime fullDate = DateTime(
+      _selectedDay.year, _selectedDay.month, _selectedDay.day, time.hour, time.minute
+    );
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('appointments')
+        .add({
+      'barberName': barber,
+      'service': service,
+      'date': Timestamp.fromDate(fullDate),
+      'status': 'agendado',
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Agendado com sucesso!")));
+    }
+  }
+
+  // --- FUNÇÃO PARA APAGAR (DESMARCAR) ---
+  Future<void> _deleteAppointment(String docId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Mostra confirmação antes de apagar
+    bool confirm = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Desmarcar"),
+        content: const Text("Tem certeza que deseja cancelar este agendamento?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Não")),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Sim")),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirm) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('appointments')
+          .doc(docId)
+          .delete();
+
+      if (mounted) {
+        Navigator.pop(context); // Fecha o modal de detalhes
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Agendamento desmarcado.")));
+      }
+    }
+  }
+
+  // --- MODAL 2: VER DETALHES (COM OPÇÃO DESMARCAR) ---
+  void _showAppointmentDetails(String docId, Map<String, dynamic> data) {
+    final date = (data['date'] as Timestamp).toDate();
+    final timeString = DateFormat('HH:mm').format(date);
+    final dateString = DateFormat('dd/MM/yyyy').format(date);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Row(
+            children: [
+              const Icon(Icons.event_available, color: Color(0xFF844333)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  data['barberName'] ?? 'Barbeiro', 
+                  style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Serviço: ${data['service']}", style: GoogleFonts.baloo2(fontSize: 16)),
+              const SizedBox(height: 8),
+              Text("Data: $dateString", style: GoogleFonts.baloo2()),
+              Text("Horário: $timeString", style: GoogleFonts.baloo2()),
+              const SizedBox(height: 8),
+              Text("Status: ${data['status']}", style: GoogleFonts.baloo2(color: Colors.grey)),
+            ],
+          ),
+          actions: [
+            // BOTÃO DESMARCAR (NOVO)
+            TextButton(
+              onPressed: () => _deleteAppointment(docId),
+              child: Text("Desmarcar", style: GoogleFonts.baloo2(color: Colors.red, fontWeight: FontWeight.bold)),
+            ),
+            // BOTÃO FECHAR (MANTIDO)
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Fechar"),
+            ),
+            // BOTÃO MENSAGEM (MANTIDO)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF844333)),
+              icon: const Icon(Icons.chat, color: Colors.white, size: 18),
+              label: const Text("Mensagem", style: TextStyle(color: Colors.white)),
+              onPressed: () {
+                Navigator.pop(context); 
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatView(
+                      chatName: data['barberName'],
+                      avatarUrl: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddAppointmentDialog,
+        backgroundColor: const Color(0xFF844333),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            // Título
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Text(
-                'Agenda',
-                style: GoogleFonts.baloo2(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
+              child: Text('Minha Agenda', style: GoogleFonts.baloo2(fontSize: 24, fontWeight: FontWeight.bold)),
             ),
-            const Divider(color: Colors.grey, height: 1),
-
-            // Perfil
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ValueListenableBuilder<ScheduleProfile>(
-                valueListenable: _controller.profile,
-                builder: (context, profile, child) {
-                  return Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundImage: NetworkImage(profile.profileImageUrl),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            profile.name,
-                            style: GoogleFonts.baloo2(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            profile.classification,
-                            style: GoogleFonts.baloo2(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                },
+            TableCalendar(
+              locale: 'pt_BR',
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+              },
+              calendarStyle: const CalendarStyle(
+                selectedDecoration: BoxDecoration(color: Color(0xFF844333), shape: BoxShape.circle),
+                todayDecoration: BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
               ),
+              headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
             ),
-
-            // Navegação por Abas
             TabBar(
               controller: _tabController,
-              labelStyle: GoogleFonts.baloo2(fontWeight: FontWeight.bold),
-              unselectedLabelStyle: GoogleFonts.baloo2(),
               labelColor: const Color(0xFF844333),
               unselectedLabelColor: Colors.grey,
               indicatorColor: const Color(0xFF844333),
-              tabs: const [
-                Tab(text: 'Calendário'),
-                Tab(text: 'Barbeiros'),
-                Tab(text: 'Horários'),
-              ],
+              tabs: const [Tab(text: 'Do Dia'), Tab(text: 'Histórico')],
             ),
-
-            // Conteúdo das Abas
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  // Aba 1: Calendário e Eventos
-                  _buildCalendarTab(),
-                  // Aba 2: Barbeiros
-                  _buildBarbersTab(),
-                  // Aba 3: Horários
-                  _buildTimeSlotsTab(),
-                ],
+                children: [_buildDayAppointments(), _buildAllHistory()],
               ),
             ),
           ],
@@ -113,148 +281,79 @@ class _ScheduleViewState extends State<ScheduleView> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildCalendarTab() {
-    return Column(
-      children: [
-        TableCalendar<Event>(
-          locale: 'pt_BR',
-          firstDay: DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
-          focusedDay: _controller.focusedDay,
-          selectedDayPredicate: (day) => isSameDay(_controller.selectedDay, day),
-          onDaySelected: (selectedDay, focusedDay) {
-            setState(() {
-              _controller.onDaySelected(selectedDay, focusedDay);
-            });
-          },
-          eventLoader: _controller.getEventsForDay,
-          headerStyle: HeaderStyle(
-            titleCentered: true,
-            formatButtonVisible: false,
-            titleTextStyle: GoogleFonts.baloo2(fontSize: 16),
-          ),
-          calendarStyle: CalendarStyle(
-            defaultTextStyle: GoogleFonts.baloo2(),
-            weekendTextStyle: GoogleFonts.baloo2(),
-            todayDecoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              shape: BoxShape.circle,
-            ),
-            selectedDecoration: const BoxDecoration(
-              color: Color(0xFF844333),
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8.0),
-        Expanded(
-          child: ValueListenableBuilder<List<Event>>(
-            valueListenable: _controller.selectedEvents,
-            builder: (context, value, _) {
-              return ListView.builder(
-                itemCount: value.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                    child: ListTile(
-                      title: Text(value[index].title, style: GoogleFonts.baloo2()),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _buildDayAppointments() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Center(child: Text("Faça login"));
 
-  Widget _buildBarbersTab() {
-    return ListView.builder(
-      itemCount: _controller.favoriteBarbers.length,
-      itemBuilder: (context, index) {
-        final barber = _controller.favoriteBarbers[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: ListTile(
-            leading: CircleAvatar(
-              radius: 25,
-              backgroundImage: NetworkImage(barber.avatarUrl),
-            ),
-            title: Text(barber.name, style: GoogleFonts.baloo2(fontWeight: FontWeight.bold)),
-            subtitle: Text(barber.specialty, style: GoogleFonts.baloo2()),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              // Lógica para selecionar o barbeiro
-            },
-          ),
+    final startOfDay = Timestamp.fromDate(DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day));
+    final endOfDay = Timestamp.fromDate(DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day, 23, 59, 59));
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('appointments')
+          .where('date', isGreaterThanOrEqualTo: startOfDay)
+          .where('date', isLessThanOrEqualTo: endOfDay)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) return const Center(child: Text("Sem agendamentos."));
+
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index]; // Pega o documento
+            final data = doc.data() as Map<String, dynamic>;
+            final docId = doc.id; // Pega o ID
+
+            return GestureDetector(
+              onTap: () => _showAppointmentDetails(docId, data), // Passa o ID e os dados
+              child: Card(
+                margin: const EdgeInsets.all(8),
+                child: ListTile(
+                  leading: const Icon(Icons.cut, color: Color(0xFF844333)),
+                  title: Text(data['service']),
+                  subtitle: Text(data['barberName']),
+                  trailing: Text(DateFormat('HH:mm').format((data['date'] as Timestamp).toDate())),
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildTimeSlotsTab() {
-    // Pega o primeiro horário para posicionar a linha vermelha
-    final firstSlot = _controller.favoriteTimeSlots.isNotEmpty ? _controller.favoriteTimeSlots.first : null;
-
-    return Stack(
-      children: [
-        ListView.builder(
-          padding: const EdgeInsets.all(16.0),
-          itemCount: _controller.favoriteTimeSlots.length,
+  Widget _buildAllHistory() {
+     final user = FirebaseAuth.instance.currentUser;
+     return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .collection('appointments')
+          .orderBy('date', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox();
+        final docs = snapshot.data!.docs;
+        return ListView.builder(
+          itemCount: docs.length,
           itemBuilder: (context, index) {
-            final slot = _controller.favoriteTimeSlots[index];
-            return IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Coluna do Horário
-                  SizedBox(
-                    width: 60,
-                    child: Text(
-                      slot.time,
-                      style: GoogleFonts.baloo2(fontWeight: FontWeight.bold, color: Colors.grey.shade600),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Card do Agendamento
-                  Expanded(
-                    child: Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              slot.service,
-                              style: GoogleFonts.baloo2(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'com ${slot.barberName}',
-                              style: GoogleFonts.baloo2(color: Colors.grey.shade700),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            final doc = docs[index]; // Pega o documento
+            final data = doc.data() as Map<String, dynamic>;
+            final docId = doc.id; // Pega o ID
+
+            return ListTile(
+              title: Text(data['service']),
+              subtitle: Text(DateFormat('dd/MM - HH:mm').format((data['date'] as Timestamp).toDate())),
+              trailing: Text(data['barberName']),
+              onTap: () => _showAppointmentDetails(docId, data), // Passa o ID e os dados
             );
           },
-        ),
-        // Linha vermelha horizontal posicionada no primeiro agendamento
-        if (firstSlot != null)
-          Positioned(
-            top: 16, // Padding da ListView
-            left: 70, // Posição após o texto do horário
-            right: 16,
-            child: Container(height: 2, color: Colors.red),
-          ),
-      ],
+        );
+      },
     );
   }
 }

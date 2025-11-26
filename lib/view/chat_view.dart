@@ -1,100 +1,142 @@
 import 'package:flutter/material.dart';
-import '../client_flow/controller/chat_controller.dart';
-import '../model/chat_model.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ChatView extends StatelessWidget {
-  final String chatName;
+class ChatView extends StatefulWidget {
+  final String chatName; // Nome do Barbeiro/Chat
   final String avatarUrl;
 
-  ChatView({
+  const ChatView({
     super.key,
     required this.chatName,
     required this.avatarUrl,
   });
 
-  final ChatController _controller = ChatController();
+  @override
+  State<ChatView> createState() => _ChatViewState();
+}
+
+class _ChatViewState extends State<ChatView> {
   final TextEditingController _textController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Função para enviar mensagem (RF003)
+  void _sendMessage() async {
+    if (_textController.text.trim().isEmpty) return;
+
+    final user = _auth.currentUser;
+    if (user != null) {
+      final chatRef = _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('chats')
+          .doc(widget.chatName);
+
+      // 1. Adiciona a mensagem na subcoleção
+      await chatRef.collection('messages').add({
+        'text': _textController.text.trim(),
+        'senderId': user.uid,
+        'senderName': 'Eu',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // 2. Atualiza o documento do chat com a última mensagem (para aparecer na lista)
+      await chatRef.set({
+        'lastMessage': _textController.text.trim(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'barberName': widget.chatName, // Garante que o campo existe
+      }, SetOptions(merge: true)); // Merge para não apagar outros dados se existirem
+
+      _textController.clear();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Busca as mensagens corretas para este chat
-    final messages = _controller.getMessagesForChat(chatName);
+    final user = _auth.currentUser;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Row(
+          children: [
+            CircleAvatar(backgroundImage: NetworkImage(widget.avatarUrl)),
+            const SizedBox(width: 10),
+            Text(widget.chatName, style: GoogleFonts.baloo2(color: Colors.black, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
       body: Column(
         children: [
-          SafeArea(
-            child: Column(
-              children: [                
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ),
-                  ],
-                ),
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: NetworkImage(avatarUrl),
-                  ),
-                  title: Text(
-                    chatName,
-                    style: GoogleFonts.baloo2(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    'Online',
-                    style: GoogleFonts.baloo2(color: Colors.green),
-                  ),
-                ),
-                const Divider(color: Colors.grey, height: 1),
-              ],
-            ),
-          ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8.0),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final message = messages[index];
-                return _buildMessageBubble(message);
+            // StreamBuilder para ler as mensagens (RF005)
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('users')
+                  .doc(user!.uid)
+                  .collection('chats')
+                  .doc(widget.chatName)
+                  .collection('messages')
+                  .orderBy('timestamp', descending: false) // Ordem cronológica
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final messages = snapshot.data!.docs;
+
+                return ListView.builder(
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msgData = messages[index].data() as Map<String, dynamic>;
+                    final isMe = msgData['senderId'] == user.uid;
+
+                    return _buildMessageBubble(
+                      msgData['text'] ?? '',
+                      isMe,
+                    );
+                  },
+                );
               },
             ),
           ),
-          _buildMessageComposer(),
+          _buildInputArea(),
         ],
       ),
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
+  Widget _buildMessageBubble(String text, bool isMe) {
     return Align(
-      alignment: message.isSentByMe ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
         padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
-          color: message.isSentByMe ? const Color(0xFF844333) : const Color(0xFFd3d3d3),
+          color: isMe ? const Color(0xFF844333) : Colors.grey[300],
           borderRadius: BorderRadius.circular(16.0),
         ),
         child: Text(
-          message.text,
+          text,
           style: GoogleFonts.baloo2(
-            color: message.isSentByMe ? Colors.white : Colors.black,
+            color: isMe ? Colors.white : Colors.black,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildMessageComposer() {
+  Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+      padding: const EdgeInsets.all(8.0),
       child: SafeArea(
         child: Row(
           children: [
@@ -105,16 +147,16 @@ class ChatView extends StatelessWidget {
                   hintText: 'Digite uma mensagem...',
                   filled: true,
                   fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(24.0), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.send, color: Color(0xFF844333)),
-              onPressed: () {
-                // Funcionalidade de envio a ser implementada
-              },
+              onPressed: _sendMessage,
             ),
           ],
         ),
